@@ -143,24 +143,19 @@ public class Box2DContactListener implements ContactListener {
         //do damage
         damage(engine, attackedEntity, damageComponent.source, damageComponent.damage, contact, damagedBody);
 
-        //this shouldn't be here because activates with star and laser.
-        AsteroidComponent asteroid = Mappers.asteroid.get(attackedEntity);
-        if (asteroid != null) {
-            engine.getSystem(SoundSystem.class).asteroidHit(health.health / health.maxHealth);
-        }
-
         //fx
-        explodeProjectile(contact, attackedEntity);
+        explodeProjectile(contact, attackedEntity, health);
         
         //remove projectile
         damageEntity.add(new RemoveComponent());
     }
 
     Color cacheColor = new Color();
-    private void explodeProjectile(Contact contact, Entity attackedEntity) {
+    private void explodeProjectile(Contact contact, Entity attackedEntity, HealthComponent health) {
         cacheColor.set(Color.WHITE);
         AsteroidComponent asteroid = Mappers.asteroid.get(attackedEntity);
         if (asteroid != null) {
+            engine.getSystem(SoundSystem.class).asteroidHit(health.health / health.maxHealth);
             cacheColor.set(asteroid.color);
         }
         //we only need the first point in this case
@@ -251,7 +246,7 @@ public class Box2DContactListener implements ContactListener {
             // hull heat resistance that can be upgraded?
             shield.heat += damage * 0.0005f;// * (1.0f - shield.heatResistance);
             if (shield.heat > 1) {
-                shield.overHeat += shield.heat-1;
+                shield.overHeat += shield.heat - 1;
                 shield.heat = 1f;
             }
             return;
