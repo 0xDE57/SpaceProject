@@ -167,6 +167,16 @@ public class TitleScreenMenu {
             }
         });
 
+        VisTextButton btnCircle = new VisTextButton("[DEBUG] Circle thing");
+        btnCircle.getLabel().setAlignment(Align.left);
+        btnCircle.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                game.setScreen(new TestCircleThing());
+            }
+        });
+        table.add(btnCircle).fillX().row();
+
         table.add(btnVoronoi).fillX().row();
         table.add(btnNoise).fillX().row();
         table.add(btn3D).fillX().row();
