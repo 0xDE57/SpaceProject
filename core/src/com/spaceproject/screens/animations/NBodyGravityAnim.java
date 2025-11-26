@@ -4,20 +4,33 @@ package com.spaceproject.screens.animations;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.Circle;
-import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
-import com.kotcrab.vis.ui.widget.VisSlider;
-import com.kotcrab.vis.ui.widget.VisTextButton;
-import com.kotcrab.vis.ui.widget.VisTextField;
-import com.kotcrab.vis.ui.widget.VisWindow;
+import com.badlogic.gdx.utils.FloatArray;
+import com.badlogic.gdx.utils.ShortArray;
+import com.kotcrab.vis.ui.widget.*;
 
 public class NBodyGravityAnim extends TitleAnimation implements Disposable {
-    
+
+    class Stats {
+        float totalMass;
+        float totalRadius;
+        Vector2 tVeloticy = new Vector2();
+        Vector2 tAccel = new Vector2();
+        float totalVelocity;
+        float totalAcceleration;
+
+        public void reset() {
+            totalMass = 0;
+            totalRadius = 0;
+            totalVelocity = 0;
+            totalAcceleration = 0;
+        }
+    }
     
     class SimpleBody {
         
@@ -73,7 +86,9 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
             //pos.add(pos.cpy().sub(bodyB.pos));//split the difference
         }
     }
-    
+
+    Stats stats = new Stats();
+
     float timeAccumulator;
     float simulationSpeed;
     float gravity;
@@ -86,7 +101,14 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
     SimpleBody selectedBody = null;
     int releaseMS = 200;
     long dragTime;
-    
+
+    boolean renderBodies = true;
+    boolean renderTails = true;
+    boolean renderDelaunay = false;
+    FloatArray points = new FloatArray();
+    ShortArray triangles;
+    DelaunayTriangulator delaunay = new DelaunayTriangulator();
+
     Stage stage;
     VisWindow window;
     VisSlider simulationSpeedSlider;
@@ -101,7 +123,8 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
     
     private void buildWindow() {
         window = new VisWindow("n-body");
-        
+        window.addCloseButton();
+
         //https://github.com/kotcrab/vis-ui/wiki/VisValidatableTextField
         final VisTextField gravityValue = new VisTextField();
         gravityValue.setText(gravity + "");
@@ -124,7 +147,7 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
         });
         gravitySlider.pack();
     
-    
+        //todo: make VisLabeledSlider() that wraps VisTextField & VisSlider() into one UI element
         final VisTextField simSpeedValue = new VisTextField();
         simSpeedValue.setText(simulationSpeed + "");
         //gravityValue.addListener();
@@ -150,21 +173,72 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
                 simulationSpeedSlider.setValue(simulationSpeed);
             }
         });
-        
+
+        final VisCheckBox toggleDelaunay = new VisCheckBox("delaunay", renderDelaunay);
+        toggleDelaunay.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                renderDelaunay = toggleDelaunay.isChecked();
+            }
+        });
+
+        final VisCheckBox toggleBodies = new VisCheckBox("bodies", renderBodies);
+        toggleBodies.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                renderBodies = toggleBodies.isChecked();
+            }
+        });
+
+        final VisCheckBox toggleTails = new VisCheckBox("tails", renderTails);
+        toggleTails.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                renderTails = toggleTails.isChecked();
+            }
+        });
+
+        int maxTail = 1000;
+        VisSlider tailSlider = new VisSlider(0, maxTail, 1, false);
+        tailSlider.setValue(tailSize);
+        tailSlider.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                tailSize = (int) tailSlider.getValue();
+            }
+        });
+        tailSlider.pack();
+
+
         window.add(simSpeedValue);
         window.add(simulationSpeedSlider);
         window.add().row();
         window.add(gravityValue);
         window.add(gravitySlider);
         window.add().row();
-        window.add(resetButton);
-        
+        window.add(toggleDelaunay);
+        window.add().row();
+        window.add(toggleBodies);
+        window.add().row();
+        window.add(toggleTails);
+        window.add().row();
+        //window.add(tailSlider);
+        //window.add().row();
+
         //radio button: no-collision, bounce, absorb
+        //bounce type, add or remove velocity, does the bounce absorb energy or give energy?
+        //bouns off bodies, bounce off wall
         //---
+        //stats:
         //num bodies, total mass
+
+        //render options:
+        //color tails based off speed;
+        //color bodies based of relative size,
+        //color bodies based off relative speed
         //---
-        //window.add(resetbutton);
-        
+
+        window.add(resetButton);
         window.pack();
     }
     
@@ -199,13 +273,13 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
         
         Gdx.app.log(getClass().getSimpleName(), "reset initial bodies. initial settings: " + gravity );
     }
-    
+
     @Override
     public void render(float delta, ShapeRenderer shape) {
         //update simulation
         physicsStep(delta * simulationSpeed);
         timeAccumulator += delta;
-        
+
         //reset to initial conditions
         if (Gdx.input.isKeyJustPressed(Input.Keys.N)) {//n for n-body
             if (!window.hasParent()) {
@@ -221,16 +295,21 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
         //mouse position
         int x = Gdx.input.getX();
         int y = Gdx.graphics.getHeight() - Gdx.input.getY();
-    
+        boolean mouseInWindw = false;
+        if (window.hasParent()) {
+            Rectangle.tmp.setPosition(window.getX(), window.getY()).setSize(window.getWidth(), window.getHeight());
+            mouseInWindw = Rectangle.tmp.contains(x, y);
+            //Gdx.app.log(this.getClass().getName(), "x:" + winX + ", y: " + winY);
+        }
+
         //add new body
-        if (Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
-            //todo: input multiplex, don't create body when interacting with scene2d UI elements.
+        if (Gdx.input.isButtonPressed(Input.Buttons.LEFT) && !mouseInWindw) {
             if (ghostBody == null) {
                 ghostBody = new SimpleBody(0, 0, 5);
                 timeAccumulator = 0;
             }
         } else {
-            if (ghostBody != null) {
+            if (ghostBody != null && !mouseInWindw) {
                 ghostBody.calculateMass();//recalc mass due to radius change
                 bodies.add(ghostBody);
                 Gdx.app.log(getClass().getSimpleName(), "added body.(" + ghostBody.mass + ") total: " + bodies.size);
@@ -273,23 +352,47 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
                 selectedBody = null;
             }
         }
-        
+
+        if (renderDelaunay) {
+            points.clear();
+            for (SimpleBody body : bodies) {
+                points.add(body.pos.x, body.pos.y);
+            }
+            triangles = delaunay.computeTriangles(points, false);
+            shape.begin(ShapeRenderer.ShapeType.Line);
+            for (int i = 0; i < triangles.size; i += 3) {
+                //get points
+                int p1 = triangles.get(i) * 2;
+                int p2 = triangles.get(i + 1) * 2;
+                int p3 = triangles.get(i + 2) * 2;
+                shape.triangle(
+                        points.get(p1), points.get(p1 + 1),
+                        points.get(p2), points.get(p2 + 1),
+                        points.get(p3), points.get(p3 + 1));
+            }
+            shape.end();
+        }
+
         shape.begin(ShapeRenderer.ShapeType.Filled);
         shape.setColor(0, 0, 0, 1);
         
         //draw bodies
-        for (SimpleBody body : bodies) {
-            shape.setColor(0, 0, 0, 1);
-            shape.circle(body.pos.x, body.pos.y, body.radius);
+        if (renderBodies) {
+            for (SimpleBody body : bodies) {
+                shape.setColor(0, 0, 0, 1);
+                shape.circle(body.pos.x, body.pos.y, body.radius);
+            }
         }
         
         //draw tails
-        shape.setColor(1, 1, 1, 1);
-        for (SimpleBody body: bodies) {
-            body.updateTail();
-            for (int index = 0; index < body.tail.length; index++) {
-                Vector2 tail = body.tail[index];
-                shape.point(tail.x, tail.y, 0);
+        if (renderTails) {
+            shape.setColor(1, 1, 1, 1);
+            for (SimpleBody body : bodies) {
+                body.updateTail();
+                for (int index = 0; index < body.tail.length; index++) {
+                    Vector2 tail = body.tail[index];
+                    shape.point(tail.x, tail.y, 0);
+                }
             }
         }
         
@@ -313,7 +416,9 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
     /** integration */
     private void physicsStep(float delta) {
         float step = 0.5f * delta;
-        
+
+        stats.reset();
+
         // add velocity from momentum to position (first pass)
         for (SimpleBody body : bodies) {
             body.pos.set(body.pos.cpy().add(body.vel.x * step, body.vel.y * step));
@@ -325,6 +430,12 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
         // add acceleration to velocity
         for (SimpleBody body : bodies) {
             body.vel.set(body.vel.cpy().add(body.accel.x * delta, body.accel.y * delta));
+            stats.totalVelocity += body.vel.len();
+            //only need positive delta?
+            //stats.tVeloticy.x += Math.abs(body.pos.x);
+            //stats.tVeloticy.y += Math.abs(body.pos.y);
+
+            stats.tVeloticy.add(body.vel);
         }
     
         // add velocity from gravitational force to position (second pass)
