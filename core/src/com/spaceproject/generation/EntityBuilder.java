@@ -87,6 +87,10 @@ public class EntityBuilder {
         shipEntity.add(health);
 
         //weapon
+        CannonComponent cannon = makeCannon(vehicle.dimensions.width);
+        shipEntity.add(cannon);
+        vehicle.currentTool = VehicleComponent.Tool.cannon;
+        /*
         int index = 0;
         switch(index) {
             case 0:
@@ -98,11 +102,13 @@ public class EntityBuilder {
                 ChargeCannonComponent chargeCannon = makeChargeCannon(vehicle.dimensions.width);
                 shipEntity.add(chargeCannon);
                 break;
+                /*
             case 2:
                 LaserComponent laser = new LaserComponent(520, 250, 30, 1);
                 shipEntity.add(laser);
                 break;
-        }
+        }*/
+
         /*
         //vehicle.tools.put(VehicleComponent.Tool.laser.ordinal(), new LaserComponent(520, 250, 30, 1));
         TractorBeamComponent tractorBeam = new TractorBeamComponent();
