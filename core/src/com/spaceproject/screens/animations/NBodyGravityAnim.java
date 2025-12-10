@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.ShortArray;
 import com.kotcrab.vis.ui.widget.*;
+import com.spaceproject.ui.VisLabeledSlider;
 
 public class NBodyGravityAnim extends TitleAnimation implements Disposable {
 
@@ -111,8 +112,8 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
 
     Stage stage;
     VisWindow window;
-    VisSlider simulationSpeedSlider;
-    VisSlider gravitySlider;
+    VisLabeledSlider simulationSpeedSlider;
+    VisLabeledSlider gravitySlider;
     
     public NBodyGravityAnim(Stage stage) {
         resetInitialBodies();
@@ -125,44 +126,26 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
         window = new VisWindow("n-body");
         window.addCloseButton();
 
-        //https://github.com/kotcrab/vis-ui/wiki/VisValidatableTextField
-        final VisTextField gravityValue = new VisTextField();
-        gravityValue.setText(gravity + "");
-        gravityValue.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                System.out.println();
-            }
-        });
-        gravityValue.pack();
         float maxGravity = 5;
-        gravitySlider = new VisSlider(-maxGravity, maxGravity, 0.1f, false);
+        gravitySlider = new VisLabeledSlider(-maxGravity, maxGravity, 0.1f, "gravity");
         gravitySlider.setValue(gravity);
         gravitySlider.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 gravity = gravitySlider.getValue();
-                gravityValue.setText(gravity + "");
             }
         });
         gravitySlider.pack();
-    
-        //todo: make VisLabeledSlider() that wraps VisTextField & VisSlider() into one UI element
-        final VisTextField simSpeedValue = new VisTextField();
-        simSpeedValue.setText(simulationSpeed + "");
-        //gravityValue.addListener();
-        simSpeedValue.pack();
+
         int maxSim = 100;
-        simulationSpeedSlider = new VisSlider(-maxSim, maxSim, 0.1f, false);
+        simulationSpeedSlider = new VisLabeledSlider(-maxSim, maxSim, 0.1f, "sim");
         simulationSpeedSlider.setValue(simulationSpeed);
         simulationSpeedSlider.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 simulationSpeed = simulationSpeedSlider.getValue();
-                simSpeedValue.setText(simulationSpeed + "");
             }
         });
-        simulationSpeedSlider.pack();
         
         final VisTextButton resetButton = new VisTextButton("[R]eset");
         resetButton.addListener(new ChangeListener() {
@@ -198,8 +181,8 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
             }
         });
 
-        int maxTail = 1000;
-        VisSlider tailSlider = new VisSlider(0, maxTail, 1, false);
+        int maxTail = 5000;
+        VisLabeledSlider tailSlider = new VisLabeledSlider(0, maxTail, 1, "tailsize");
         tailSlider.setValue(tailSize);
         tailSlider.addListener(new ChangeListener() {
             @Override
@@ -209,21 +192,19 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
         });
         tailSlider.pack();
 
-
-        window.add(simSpeedValue);
+        //todo: alignment. text length of label affects slider alignment
         window.add(simulationSpeedSlider);
-        window.add().row();
-        window.add(gravityValue);
+        window.row();
         window.add(gravitySlider);
-        window.add().row();
+        window.row();
         window.add(toggleDelaunay);
-        window.add().row();
+        window.row();
         window.add(toggleBodies);
-        window.add().row();
+        window.row();
         window.add(toggleTails);
-        window.add().row();
-        //window.add(tailSlider);
-        //window.add().row();
+        window.row();
+        window.add(tailSlider);
+        window.row();
 
         //radio button: no-collision, bounce, absorb
         //bounce type, add or remove velocity, does the bounce absorb energy or give energy?
