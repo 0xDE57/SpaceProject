@@ -1,11 +1,9 @@
 package com.spaceproject.ui;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.kotcrab.vis.ui.widget.VisLabel;
-import com.kotcrab.vis.ui.widget.VisSlider;
-import com.kotcrab.vis.ui.widget.VisTable;
-import com.kotcrab.vis.ui.widget.VisTextField;
+import com.kotcrab.vis.ui.widget.*;
 
 public class VisLabeledSlider extends VisTable {
 
@@ -18,7 +16,23 @@ public class VisLabeledSlider extends VisTable {
 
         label = new VisLabel(field);
 
+        //should use VisValidatableTextField(); ?
         textField = new VisTextField("0");
+        textField.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                String text = textField.getText();
+                if (text.isEmpty()) return;
+
+                try {
+                    float value = Float.parseFloat(text);
+                    slider.setValue(value);
+                } catch (NumberFormatException e) {
+                    Gdx.app.log(getClass().getSimpleName(), "Failed to parse value '" + text + "' as float. " + e.getMessage());
+                }
+            }
+        });
+
         slider.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {

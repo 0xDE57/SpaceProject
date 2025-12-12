@@ -116,10 +116,10 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
     VisLabeledSlider gravitySlider;
     
     public NBodyGravityAnim(Stage stage) {
-        resetInitialBodies();
-        
         this.stage = stage;
         buildWindow();
+
+        resetInitialBodies();
     }
     
     private void buildWindow() {
@@ -152,8 +152,6 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 resetInitialBodies();
-                gravitySlider.setValue(gravity);
-                simulationSpeedSlider.setValue(simulationSpeed);
             }
         });
 
@@ -193,6 +191,7 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
         tailSlider.pack();
 
         //todo: alignment. text length of label affects slider alignment
+        //todo: add color pickers for bodies, tails, triangle
         window.add(simulationSpeedSlider);
         window.row();
         window.add(gravitySlider);
@@ -251,7 +250,10 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
         //reset simulation parameters
         gravity = 1f;
         simulationSpeed = 15.0f;
-        
+
+        window.getTitleLabel().setText("n-body (" + bodies.size + ")");
+        gravitySlider.setValue(gravity);
+        simulationSpeedSlider.setValue(simulationSpeed);
         Gdx.app.log(getClass().getSimpleName(), "reset initial bodies. initial settings: " + gravity );
     }
 
@@ -270,7 +272,6 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {//R for reset
             resetInitialBodies();
-            window.getTitleLabel().setText("n-body (" + bodies.size + ")");
         }
         
         //mouse position
@@ -366,7 +367,7 @@ public class NBodyGravityAnim extends TitleAnimation implements Disposable {
         }
         
         //draw tails
-        if (renderTails) {
+        if (renderTails && tailSize > 0) {
             shape.setColor(1, 1, 1, 1);
             for (SimpleBody body : bodies) {
                 body.updateTail();
