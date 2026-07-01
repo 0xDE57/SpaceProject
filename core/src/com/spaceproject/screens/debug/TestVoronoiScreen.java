@@ -1166,8 +1166,8 @@ public class TestVoronoiScreen extends MyScreenAdapter {
         //controls
         text.draw(batch, "[ESC] Return to menu", x, y - h * line++);
         text.draw(batch, "[X] Clear", x, y - h * line++);//B makes no sense but Copy has to be C
-        text.draw(batch, "[Spacebar] Generate Random + [ALT] add centroid", x, y - h * line++);
-        text.draw(batch, "[SHIFT + Spacebar] Generate Regular + [ALT] add centroid", x, y - h * line++);
+        text.draw(batch, "[Spacebar] Generate Random + [CTRL] add centroid", x, y - h * line++);
+        text.draw(batch, "[SHIFT + Spacebar] Generate Regular + [CTRL] add centroid", x, y - h * line++);
         text.draw(batch, "[L-Click] Drag vertex", x, y - h * line++);
         text.draw(batch, "[R-Click] Create new vertex", x, y - h  * line++);
         text.draw(batch, "[SHIFT + R-Click] Delete vertex", x, y - h  * line++);
