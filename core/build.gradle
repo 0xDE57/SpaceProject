@@ -4,12 +4,13 @@ eclipse.project.name = appName + '-core'
 dependencies {
   api "com.badlogicgames.ashley:ashley:$ashleyVersion"
   api "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
-  //api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
-  api "org.aya-prover.gdx-box2d:box2d:+"
+//  api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
+  api "org.aya-prover.gdx-box2d:box2d:1.3.0"
   api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
   api "com.badlogicgames.gdx:gdx:$gdxVersion"
   api "com.kotcrab.vis:vis-ui:$visUiVersion"
   api "space.earlygrey:shapedrawer:$shapeDrawerVersion"
+  api "com.github.Hangman:TuningFork:$tuningForkVersion"
 
   if(enableGraalNative == 'true') {
     implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"
