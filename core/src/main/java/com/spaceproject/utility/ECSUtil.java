@@ -11,7 +11,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.StringBuilder;
 import com.spaceproject.components.*;
 
 import java.lang.reflect.Field;
@@ -30,13 +29,13 @@ public class ECSUtil {
                     + " to give to " + DebugUtil.objString(toEntity));*/
             return null;
         }
-    
+
         toEntity.add(transferredComponent);
         //Gdx.app.debug("ECSUtil", "transferComponent: " + DebugUtil.objString(transferredComponent)
         //        + ": " + DebugUtil.objString(fromEntity) + " -> " + DebugUtil.objString(toEntity));
         return transferredComponent;
     }
-    
+
     public static void transferControl(Entity fromEntity, Entity toEntity) {
         transferComponent(fromEntity, toEntity, CameraFocusComponent.class);
         transferComponent(fromEntity, toEntity, ControlFocusComponent.class);
@@ -45,7 +44,7 @@ public class ECSUtil {
         transferComponent(fromEntity, toEntity, CamTargetComponent.class);
         transferComponent(fromEntity, toEntity, StatsComponent.class);
     }
-    
+
     public static Entity copyEntity(Entity entity) {
         Entity newEntity = new Entity();
         for (Component c : entity.getComponents()) {
@@ -53,11 +52,11 @@ public class ECSUtil {
         }
         return newEntity;
     }
-    
+
     public static Entity closestEntity(Vector2 position, ImmutableArray<Entity> entities) {
         if (entities == null || entities.size() == 0)
             return null;
-        
+
         Entity targetEntity = entities.first();
         float targetDist = position.dst(Mappers.transform.get(targetEntity).pos);
         for (Entity searchEnt : entities) {
@@ -67,7 +66,7 @@ public class ECSUtil {
                 targetEntity = searchEnt;
             }
         }
-        
+
         return targetEntity;
     }
 
@@ -86,7 +85,7 @@ public class ECSUtil {
         }
         return cluster;
     }
-    
+
     /*
     public static Array<Entity> getEntityClusterForNode(Engine engine, Entity entity) {
         AttachedToComponent attached = Mappers.attachedTo.get(entity);
@@ -123,13 +122,13 @@ public class ECSUtil {
         }
         return infoString.toString();
     }
-    
+
     public static void printSystems(Engine eng) {
         for (EntitySystem sys : eng.getSystems()) {
             Gdx.app.debug(className, sys + " (" + sys.priority + ")");
         }
     }
-    
+
     public static void printEntities(Engine eng) {
         for (Entity entity : eng.getEntities()) {
             printEntity(entity);
@@ -155,5 +154,5 @@ public class ECSUtil {
         }
         Gdx.app.error(className, infoString.toString());
     }
-    
+
 }
