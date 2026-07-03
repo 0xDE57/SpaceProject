@@ -129,7 +129,7 @@ public class SoundSystem extends EntitySystem implements Disposable {
     public void resumeAll() {
         audio.resumeAll();
     }
-    
+
     public static int stopSound(SoundComponent soundComponent) {
         int stopped = 0;
         for (ObjectMap.Entry<String, BufferedSoundSource> sound : soundComponent.sources) {
@@ -186,7 +186,7 @@ public class SoundSystem extends EntitySystem implements Disposable {
             }
         }
     }
-    
+
     public void asteroidShatter(ItemComponent.Resource resource) {
         float pitch = MathUtils.random(0.5f, 2.0f);
         //pitch based on asteroid size?
@@ -205,24 +205,24 @@ public class SoundSystem extends EntitySystem implements Disposable {
         float pitch = 1 + 1 - ratio;
         click.play(0.5f, pitch);
     }
-    
+
     public void cannonShoot(float pitch) {
         float offset = 0.02f;
         cannonShoot(0.1f, pitch + MathUtils.random(-offset, offset));
     }
-    
+
     public void cannonShoot(float volume, float pitch) {
         laserShoot.play(volume, pitch, 0);
     }
-    
+
     public void laserCharge(float volume, float pitch) {
         //laserShootCharge.play(volume, pitch, 0);
     }
-    
+
     public void hullImpactLight(float volume) {
         hullImpact.play(volume, 2, 0);
     }
-    
+
     public void hullImpactHeavy(float pitch) {
         hullImpactHeavy.play(1, pitch, 0);
     }
@@ -246,28 +246,28 @@ public class SoundSystem extends EntitySystem implements Disposable {
             //if ()
         }*/
     }
-    
+
     public void shieldImpact(float volume) {
         shieldImpact.play(volume, 1, 0);
     }
-    
+
     public void shieldOn() {
         shieldOn.play();
     }
-    
+
     public void shieldOff() {
         shieldOff.play();
     }
-    
+
     public void hyperdriveEngage() {
         //hyperdriveEngage.play();//disable for now
     }
-    
+
     public void pickup() {
         float pitch = MathUtils.random(0.5f, 2.0f);
         pickup.play(0.5f, pitch, 0);
     }
-    
+
     public void shipExplode() {
         shipExplode.play();
     }

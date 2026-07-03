@@ -1,8 +1,21 @@
-apply plugin: "java"
-
-sourceCompatibility = 1.8
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+eclipse.project.name = appName + '-core'
 
-sourceSets.main.java.srcDirs = [ "src/" ]
+dependencies {
+  api "com.badlogicgames.ashley:ashley:$ashleyVersion"
+  api "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
+  //api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
+  api "org.aya-prover.gdx-box2d:box2d:+"
+  api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
+  api "com.badlogicgames.gdx:gdx:$gdxVersion"
+  api "com.kotcrab.vis:vis-ui:$visUiVersion"
+  api "space.earlygrey:shapedrawer:$shapeDrawerVersion"
 
-java.targetCompatibility = JavaVersion.VERSION_1_8
+  if(enableGraalNative == 'true') {
+    implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"
+  }
+}
+
+jar {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}

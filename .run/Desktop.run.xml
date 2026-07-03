@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Desktop" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.spaceproject.lwjgl3.Lwjgl3Launcher" />
+    <module name="SpaceProject.lwjgl3.main" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

@@ -10,7 +10,6 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.*;
-import com.badlogic.gdx.utils.StringBuilder;
 import com.spaceproject.generation.FontLoader;
 import com.spaceproject.math.*;
 import com.spaceproject.screens.MyScreenAdapter;
@@ -161,7 +160,7 @@ public class TestVoronoiScreen extends MyScreenAdapter {
     final Vector2 intersect = new Vector2();
     final Vector2 cacheVec = new Vector2();
     final Color cacheColor = new Color();
-    
+
     //toggles
     boolean debugVertexOrder = false,
             drawCircumcircle = false,
@@ -189,7 +188,7 @@ public class TestVoronoiScreen extends MyScreenAdapter {
             drawAnticomplementaryTriangle = false,
             //drawPythagSquare = true,
             metaball = false;
-    
+
     int pSize = 5;
     float dragRadius = 10;
     int focusedPoint = -1;//no index
@@ -404,7 +403,7 @@ public class TestVoronoiScreen extends MyScreenAdapter {
             //find surrounding cells for each cell
             DelaunayCell.findNeighbors(dCells);//todo: optimize. profiler says this function is very heavy!!!
         }
-        
+
         //calculate the convex hull of all the points
         hull = convex.computePolygon(points, false).toArray();// <- system.arraycopy()
         //computePolygon -> Returns convex hull in counter-clockwise order. Note: the last point in the returned list is the same as the first one.
@@ -497,7 +496,7 @@ public class TestVoronoiScreen extends MyScreenAdapter {
             }
         }
     }
-    
+
     private void drawIntersectingLines(DelaunayCell cell, Vector2 mid, float xA, float yA, float xB, float yB) {
         if (Intersector.intersectSegments(xA, yA, xB, yB, cell.circumCenter.x, cell.circumCenter.y, mid.x, mid.y, intersect)) {
             shape.setColor(Color.GREEN);
@@ -617,7 +616,7 @@ public class TestVoronoiScreen extends MyScreenAdapter {
             shape.setColor(Color.RED);
             shape.circle(centroid.x, centroid.y, pSize);
         }
-        
+
         for (DelaunayCell cell : dCells) {
             //draw circumcircle
             if (!hullPoly.contains(cell.circumCenter)) {
@@ -708,7 +707,7 @@ public class TestVoronoiScreen extends MyScreenAdapter {
                         cell.b.x, cell.b.y, // B
                         cell.c.x, cell.c.y);// C
             }
-            
+
             //draw midpoints
             if (drawMidpoints) {
                 shape.setColor(Color.BLUE);
@@ -759,7 +758,7 @@ public class TestVoronoiScreen extends MyScreenAdapter {
             //draw voronoi cells
             if (drawVoronoi) {
 				/*
-				shape.setColor(Color.ORANGE);		
+				shape.setColor(Color.ORANGE);
 				shape.line(cell.circumcenter, cell.midAB);
 				shape.line(cell.circumcenter, cell.midBC);
 				shape.line(cell.circumcenter, cell.midCA);
@@ -770,11 +769,11 @@ public class TestVoronoiScreen extends MyScreenAdapter {
 				if (cell.nBC != null) shape.line(cell.circumcenter, cell.nBC.circumcenter);
 				if (cell.nCA != null) shape.line(cell.circumcenter, cell.nCA.circumcenter);
 				*/
-                
+
                 drawCellEdge(cell, cell.nAB);
                 drawCellEdge(cell, cell.nBC);
                 drawCellEdge(cell, cell.nBC);
-                
+
 				/*
 				if (hullPoly.contains(cell.circumcenter)) {
 					/*
@@ -1107,7 +1106,7 @@ public class TestVoronoiScreen extends MyScreenAdapter {
 
         //toggles, add/move points, reset
         updateControls(deltaTime);
-        
+
         drawMenu();
     }
 
@@ -1194,25 +1193,25 @@ public class TestVoronoiScreen extends MyScreenAdapter {
 
         text.setColor(drawCircumcenter ? Color.GREEN : Color.BLACK);
         text.draw(batch, "[1] CircumCenter", x, y - h  * line++);
-        
+
         text.setColor(drawCircumcircle ? Color.GREEN : Color.BLACK);
         text.draw(batch, "[2] CircumCircle", x, y - h * line++);
-        
+
         text.setColor(drawVertices ? Color.GREEN : Color.BLACK);
         text.draw(batch, "[3] Vertices", x, y - h * line++);
-        
+
         text.setColor(drawMidpoints ? Color.GREEN : Color.BLACK);
         text.draw(batch, "[4] Semiperimeter (midpoints)", x, y - h * line++);
-        
+
         text.setColor(drawVoronoi ? Color.GREEN : Color.BLACK);
         text.draw(batch, "[5] Voronoi Graph", x, y - h * line++);
-        
+
         text.setColor(drawDelaunay ? Color.GREEN : Color.BLACK);
         text.draw(batch, "[6] Delaunay Graph", x, y - h * line++);
-        
+
         text.setColor(drawHull ? Color.GREEN : Color.BLACK);
         text.draw(batch, "[7] Hull", x, y - h * line++);
-        
+
         text.setColor(drawCentroid ? Color.GREEN : Color.BLACK);
         text.draw(batch, "[8] Centroid", x, y - h * line++);
 

@@ -1,67 +1,69 @@
 buildscript {
+  repositories {
+    mavenCentral()
+    gradlePluginPortal()
+    mavenLocal()
+    google()
+    maven { url = 'https://central.sonatype.com/repository/maven-snapshots/' }
+  }
+  dependencies {
 
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        maven { url "https://plugins.gradle.org/m2/" }
-        maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
-        gradlePluginPortal()
-        google()
-    }
-	
-    dependencies {
-        classpath 'com.android.tools.build:gradle:7.4.2'
-    }
+
+  }
 }
-
 
 allprojects {
-    version = '0.0'
-	
-    ext {
-        appName = 'spaceproject'
-        gdxVersion = '1.13.1'
-        gdxControllersVersion = '2.2.2'
-        ashleyVersion = '1.7.4'
-        visuiVersion = '1.5.5'
-        tuningForkVersion = '4.3.0'
+  apply plugin: 'eclipse'
+  apply plugin: 'idea'
+
+  // This allows you to "Build and run using IntelliJ IDEA", an option in IDEA's Settings.
+  idea {
+    module {
+      outputDir = file('build/classes/java/main')
+      testOutputDir = file('build/classes/java/test')
     }
-	
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        gradlePluginPortal()
-        google()
-        maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
-        maven { url "https://oss.sonatype.org/content/repositories/releases/" }
-        maven { url 'https://jitpack.io' }
-    }
+  }
 }
 
+configure(subprojects) {
+  apply plugin: 'java-library'
+  java.sourceCompatibility = 11
 
-project(":desktop") {
-    apply plugin: "java-library"
+  // From https://lyze.dev/2021/04/29/libGDX-Internal-Assets-List/
+  // The article can be helpful when using assets.txt in your project.
+  tasks.register('generateAssetList') {
+    inputs.dir("${project.rootDir}/assets/")
+    // projectFolder/assets
+    File assetsFolder = new File("${project.rootDir}/assets/")
+    // projectFolder/assets/assets.txt
+    File assetsFile = new File(assetsFolder, "assets.txt")
+    // delete that file in case we've already created it
+    assetsFile.delete()
 
-    dependencies {
-        implementation project(":core")
-        api "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
-        api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
-        api "org.aya-prover.gdx-box2d:box2d:+"
-        api "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
-        api "com.badlogicgames.gdx-controllers:gdx-controllers-desktop:$gdxControllersVersion"
+    // iterate through all files inside that folder
+    // convert it to a relative path
+    // and append it to the file assets.txt
+    fileTree(assetsFolder).collect { assetsFolder.relativePath(it) }.sort().each {
+      assetsFile.append(it + "\n")
     }
+  }
+  processResources.dependsOn 'generateAssetList'
+
+  compileJava {
+    options.incremental = true
+  }
 }
 
-project(":core") {
-    apply plugin: "java-library"
-
-    dependencies {
-        api "com.badlogicgames.gdx:gdx:$gdxVersion"
-        api "org.aya-prover.gdx-box2d:box2d:+"
-        api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
-        api "com.badlogicgames.ashley:ashley:$ashleyVersion"
-        api "com.kotcrab.vis:vis-ui:$visuiVersion"
-        api "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
-        implementation "com.github.Hangman:TuningFork:$tuningForkVersion"
-    }
+subprojects {
+  version = "$projectVersion"
+  ext.appName = 'spaceproject'
+  repositories {
+    mavenCentral()
+    // You may want to remove the following line if you have errors downloading dependencies.
+    mavenLocal()
+    maven { url = 'https://central.sonatype.com/repository/maven-snapshots/' }
+    maven { url = 'https://jitpack.io' }
+  }
 }
+
+eclipse.project.name = 'spaceproject' + '-parent'

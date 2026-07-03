@@ -205,7 +205,7 @@ public class TitleScreen extends MyScreenAdapter {
         //cleanup previous
         if (foregroundAnimation instanceof Disposable)
             ((Disposable)foregroundAnimation).dispose();
-        
+        anim = ForegroundAnimation.nbody;
         switch (anim) {
             case delaunay:
                 this.foregroundAnimation = new DelaunayAnim();
