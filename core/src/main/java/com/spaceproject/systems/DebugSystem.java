@@ -87,7 +87,7 @@ public class DebugSystem extends IteratingSystem implements Disposable {
         fontSmall = FontLoader.createFont(FontLoader.fontBitstreamVM, 10);
         fontLarge = FontLoader.createFont(FontLoader.fontBitstreamVMBold, 20);
         objects = new Array<>();
-    
+        
         debugRenderer = new Box2DDebugRenderer(
                 debugCFG.drawBodies,
                 debugCFG.drawJoints,
@@ -103,13 +103,13 @@ public class DebugSystem extends IteratingSystem implements Disposable {
                 engineView.keyDown(event, keycode);
                 return false;
             }
-    
+            
             @Override
             public boolean keyUp(InputEvent event, int keycode) {
                 super.keyUp(event, keycode);
                 return false;
             }
-    
+            
             @Override
             public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
                 super.touchDown(event, x, y, pointer, button);
@@ -117,7 +117,7 @@ public class DebugSystem extends IteratingSystem implements Disposable {
             }
         };
         GameScreen.getStage().addListener(listener);
-    
+        
         versionLayout = new GlyphLayout(fontLarge, SpaceProject.VERSION);
     }
     
@@ -165,13 +165,13 @@ public class DebugSystem extends IteratingSystem implements Disposable {
         {
             if (debugCFG.drawFPS)
                 drawFPS(diagnosticX, diagnosticY);
-    
+            
             if (debugCFG.drawDiagnosticInfo)
                 drawDiagnosticInfo(diagnosticX, diagnosticY);
-    
+            
             if (debugCFG.drawPos)
                 drawEntityPositions();
-    
+            
             if (debugCFG.drawMousePos)
                 drawMousePos();
             
@@ -182,7 +182,7 @@ public class DebugSystem extends IteratingSystem implements Disposable {
             drawDebugTexts(batch);
         }
         batch.end();
-    
+        
         if (debugCFG.box2DDebugRender)
             debugRenderer.render(GameScreen.box2dWorld, GameScreen.cam.combined);
         
@@ -196,7 +196,7 @@ public class DebugSystem extends IteratingSystem implements Disposable {
     
     private void drawFPS(int x, int y) {
         int fps = Gdx.graphics.getFramesPerSecond();
-        Color fpsColor = fps >= 120 ? Color.SKY : fps > 60 ? Color.GREEN : fps > 45 ? Color.WHITE : fps > 30 ? Color.YELLOW : Color.RED;
+        Color fpsColor = fps >= 120 ? Color.SKY : fps >= 60 ? Color.GREEN : fps >= 45 ? Color.WHITE : fps >= 30 ? Color.YELLOW : Color.RED;
         fontLarge.setColor(fpsColor);
         fontLarge.draw(batch, Integer.toString(fps), x, y);
     }
@@ -232,7 +232,7 @@ public class DebugSystem extends IteratingSystem implements Disposable {
         String camera = (int)cam.position.x + ", " + (int)cam.position.y
                 + " [" + zoomLevel + "] " + MyMath.round(cam.zoom, 2);
         fontLarge.draw(batch, camera, worldInfoX, Gdx.graphics.getHeight() - 10 - lineHeight);
-    
+        
         //seed
         String seed = "Seed: " + GameScreen.getGalaxySeed();
         if (!GameScreen.inSpace()) {
@@ -253,7 +253,7 @@ public class DebugSystem extends IteratingSystem implements Disposable {
             }
             fontSmall.draw(batch, threadSetInfo.toString(), x, bottomY + ((lineHeight * 0.5f) * linePos));
         }
-    
+        
         fontLarge.draw(batch, versionLayout, Gdx.graphics.getWidth() - versionLayout.width -10, lineHeight + 10);
     }
     
@@ -325,7 +325,7 @@ public class DebugSystem extends IteratingSystem implements Disposable {
             
             //String vel = " ~ " + MyMath.round(t.velocity.len(), 1);
             String info = MyMath.round(t.pos.x, 1) + "," + MyMath.round(t.pos.y, 1);
-    
+            
             tempProjVector.set(t.pos.cpy(), 0);
             Vector3 screenPos = cam.project(tempProjVector);
             fontSmall.draw(batch, Integer.toHexString(entity.hashCode()), screenPos.x, screenPos.y);
@@ -411,7 +411,7 @@ public class DebugSystem extends IteratingSystem implements Disposable {
                     shape.circle(entityPos.pos.x, entityPos.pos.y, radius);
                 }
             }
-    
+            
             AsteroidBeltComponent stellarDisk = Mappers.asteroidBelt.get(entity);
             if (stellarDisk != null) {
                 Vector2 pos = Mappers.transform.get(entity).pos;
