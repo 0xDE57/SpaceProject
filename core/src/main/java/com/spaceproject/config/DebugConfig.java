@@ -7,6 +7,7 @@ public class DebugConfig extends Config {
     public boolean spawnRegularBodies;
     public boolean spawnPenrose;
     public boolean glassOnly;
+    public boolean fpsGraph;
     public boolean drawDebugUI;
     public boolean drawFPS;
     public boolean drawDiagnosticInfo;
@@ -25,7 +26,7 @@ public class DebugConfig extends Config {
     public boolean invincible;
     public boolean reflectAsteroidColor;
     public boolean discoLaser;
-
+    
     @Override
     public void loadDefault() {
         spawnAsteroid = false;
@@ -34,6 +35,7 @@ public class DebugConfig extends Config {
         spawnPenrose = false;
         glassOnly = false;
         drawDebugUI = true;
+        fpsGraph = false;
         drawFPS = true;
         drawDiagnosticInfo = false;
         drawComponentList = false;

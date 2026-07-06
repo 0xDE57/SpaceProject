@@ -11,6 +11,7 @@ import com.spaceproject.SpaceProject;
 import com.spaceproject.config.DebugConfig;
 import com.spaceproject.config.KeyConfig;
 import com.spaceproject.screens.GameScreen;
+import com.spaceproject.systems.GraphSystem;
 
 public class DebugTab extends HotKeyTab {
     
@@ -92,8 +93,25 @@ public class DebugTab extends HotKeyTab {
                 debugCFG.spawnPenrose = toggleRhombus.isChecked();
             }
         });
-
-
+        
+        final VisCheckBox toggleGraph = new VisCheckBox("fps graph", debugCFG.fpsGraph);
+        toggleGraph.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                debugCFG.fpsGraph = toggleGraph.isChecked();
+                if (debugCFG.fpsGraph) {
+                    GraphSystem graphSystem = new GraphSystem();
+                    graphSystem.priority = 950;
+                    GameScreen.getEngine().addSystem(graphSystem);
+                } else {
+                    GraphSystem graph = GameScreen.getEngine().getSystem(GraphSystem.class);
+                    if (graph != null) {
+                        GameScreen.getEngine().removeSystem(graph);
+                    }
+                }
+            }
+        });
+        
         final VisCheckBox toggleComponentList = new VisCheckBox("show components (heavy)", debugCFG.drawComponentList);
         toggleComponentList.addListener(new ChangeListener() {
             @Override
@@ -220,7 +238,8 @@ public class DebugTab extends HotKeyTab {
         getContentTable().add(new Separator()).fillX();
         getContentTable().add(new Separator()).fillX();
         getContentTable().add(new Separator()).fillX().row();
-        getContentTable().add(toggleDebugMaster).left().row();
+        getContentTable().add(toggleDebugMaster).left();
+        getContentTable().add(toggleGraph).left().row();
         getContentTable().add(toggleFPS).left();
         getContentTable().add(toggleExtraInfo).left().row();
         getContentTable().add(toggleUIDebug).left().row();
