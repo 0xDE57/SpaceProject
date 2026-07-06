@@ -4,8 +4,7 @@ eclipse.project.name = appName + '-core'
 dependencies {
   api "com.badlogicgames.ashley:ashley:$ashleyVersion"
   api "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
-//  api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
-  api "org.aya-prover.gdx-box2d:box2d:1.3.0"
+  api "org.aya-prover.gdx-box2d:box2d:$box2dVersion"
   api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
   api "com.badlogicgames.gdx:gdx:$gdxVersion"
   api "com.kotcrab.vis:vis-ui:$visUiVersion"
