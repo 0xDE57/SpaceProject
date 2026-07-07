@@ -9,14 +9,14 @@ import com.spaceproject.screens.GameScreen;
 import com.spaceproject.utility.GraphSeries;
 import com.spaceproject.utility.MultiGraph;
 
-public class GraphSystem extends EntitySystem {
+public class PerformanceGraphSystem extends EntitySystem {
     
     private final ShapeRenderer shape;
     private final Matrix4 projectionMatrix;
     private final MultiGraph graph;
     private final GraphSeries fpsSeries, entities;//, c, s;
     
-    public GraphSystem() {
+    public PerformanceGraphSystem() {
         shape = GameScreen.shape;
         projectionMatrix = new Matrix4();
         

@@ -2,16 +2,14 @@ package com.spaceproject.ui.menu.tabs;
 
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.scenes.scene2d.ui.CheckBox;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.Separator;
 import com.kotcrab.vis.ui.widget.VisCheckBox;
 import com.spaceproject.SpaceProject;
 import com.spaceproject.config.DebugConfig;
 import com.spaceproject.config.KeyConfig;
 import com.spaceproject.screens.GameScreen;
-import com.spaceproject.systems.GraphSystem;
+import com.spaceproject.systems.PerformanceGraphSystem;
 
 public class DebugTab extends HotKeyTab {
     
@@ -99,10 +97,10 @@ public class DebugTab extends HotKeyTab {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 debugCFG.fpsGraph = toggleGraph.isChecked();
-                GraphSystem graph = GameScreen.getEngine().getSystem(GraphSystem.class);
+                PerformanceGraphSystem graph = GameScreen.getEngine().getSystem(PerformanceGraphSystem.class);
                 if (debugCFG.fpsGraph) {
                     if (graph == null) {
-                        GraphSystem graphSystem = new GraphSystem();
+                        PerformanceGraphSystem graphSystem = new PerformanceGraphSystem();
                         graphSystem.priority = 950;
                         GameScreen.getEngine().addSystem(graphSystem);
                     }
