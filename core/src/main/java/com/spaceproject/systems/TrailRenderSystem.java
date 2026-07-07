@@ -227,40 +227,41 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
 
     Color color = new Color();
     public void renderStatePath(TrailComponent spline) {
-        //todo: bug with tail index not properly rendered
-        boolean debugDrawHeadTail = false;
-        
-        for (int i = 0; i < spline.path.length-1; i++) {
-            Vector3 p = spline.path[i];
-            
-            int indexWrap = (i + 1) % spline.path.length;
-            Vector3 p2 = spline.path[indexWrap];
-            
-            // don't draw head to tail
-            if (indexWrap != spline.indexHead) {
-                switch (spline.state[indexWrap]) {
-                    case -4: continue; //don't render
-                    case -3: color.set(Color.GREEN); break; //or color of asteroid hit?
-                    case -2: color.set(Color.BLUE); break;
-                    case -1: color.set(Color.RED); break;
-                    case 1: color.set(Color.GOLD); break;
-                    case 2: color.set(Color.CYAN); break;
-                    case 3: color.set(Color.WHITE); break;
-                    default: color.set(Color.GRAY);
-                }
-                color.a -= (float) (spline.indexHead - indexWrap) / spline.path.length+1;
-                shape.line(p.x, p.y, p2.x, p2.y, color, color);
-                if (spline.state[indexWrap] == 3) {
-                    shape.rectLine(p.x, p.y, p2.x, p2.y, (float) (0.5f * Math.sin(animation * 3.14 * 0.5)), Color.RED, Color.RED);
-                    shape.rectLine(p.x, p.y, p2.x, p2.y, (float) (0.5f * Math.sin(animation)), Color.MAGENTA, Color.CYAN);
-                    shape.rectLine(p.x, p.y, p2.x, p2.y, (float) (0.5f * Math.sin(animation * 3.14)), Color.GOLD, Color.GREEN);
-                }
-            } else {
-                //debug draw head to tail
-                if (debugDrawHeadTail) {
-                    shape.line(p.x, p.y, p2.x, p2.y, Color.RED, Color.WHITE);
-                }
+        int length = spline.path.length;
+        int newestIndex = (spline.indexHead - 1 + length) % length;
+        for (int i = 0; i < length; i++) {
+            if (i == newestIndex) {
+                continue;
             }
+            
+            int next = (i + 1) % length;
+            Vector3 p1 = spline.path[i];
+            Vector3 p2 = spline.path[next];
+            
+            switch (spline.state[i]) {
+                case -4: continue; //don't render
+                case -3: color.set(Color.GREEN); break; //or color of asteroid hit?
+                case -2: color.set(Color.BLUE); break;
+                case -1: color.set(Color.RED); break;
+                case 1: color.set(Color.GOLD); break;
+                case 2: color.set(Color.CYAN); break;
+                case 3: color.set(Color.WHITE); break;
+                default: color.set(Color.GRAY);
+            }
+            
+            // Calculate alpha based on "age"
+            // age 0 = newest, age (length-1) = oldest
+            int age = (newestIndex - i + length) % length;
+            float alpha = 1.0f - ((float) age / length);
+            color.a = alpha;
+            
+            shape.line(p1.x, p1.y, p2.x, p2.y, color, color);
+            if (spline.state[i] == 3) {
+                shape.rectLine(p1.x, p1.y, p2.x, p2.y, (float) (0.5f * Math.sin(animation * 3.14 * 0.5)), Color.RED, Color.RED);
+                shape.rectLine(p1.x, p1.y, p2.x, p2.y, (float) (0.5f * Math.sin(animation)), Color.MAGENTA, Color.CYAN);
+                shape.rectLine(p1.x, p1.y, p2.x, p2.y, (float) (0.5f * Math.sin(animation * 3.14)), Color.GOLD, Color.GREEN);
+            }
+            
         }
     }
     
