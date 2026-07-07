@@ -99,12 +99,14 @@ public class DebugTab extends HotKeyTab {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 debugCFG.fpsGraph = toggleGraph.isChecked();
+                GraphSystem graph = GameScreen.getEngine().getSystem(GraphSystem.class);
                 if (debugCFG.fpsGraph) {
-                    GraphSystem graphSystem = new GraphSystem();
-                    graphSystem.priority = 950;
-                    GameScreen.getEngine().addSystem(graphSystem);
+                    if (graph == null) {
+                        GraphSystem graphSystem = new GraphSystem();
+                        graphSystem.priority = 950;
+                        GameScreen.getEngine().addSystem(graphSystem);
+                    }
                 } else {
-                    GraphSystem graph = GameScreen.getEngine().getSystem(GraphSystem.class);
                     if (graph != null) {
                         GameScreen.getEngine().removeSystem(graph);
                     }

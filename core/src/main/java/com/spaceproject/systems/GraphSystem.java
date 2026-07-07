@@ -20,7 +20,7 @@ public class GraphSystem extends EntitySystem {
         shape = GameScreen.shape;
         projectionMatrix = new Matrix4();
         
-        graph = new MultiGraph(400, 200);
+        graph = new MultiGraph(400, 150);
         fpsSeries = graph.addSeries(1000, Color.GREEN);
         entities = graph.addSeries(1000, Color.WHITE);
         //c = graph.addSeries(200, Color.LIGHT_GRAY);
@@ -35,7 +35,7 @@ public class GraphSystem extends EntitySystem {
         shape.begin(ShapeRenderer.ShapeType.Line);
         fpsSeries.update(Gdx.graphics.getFramesPerSecond());
         entities.update(getEngine().getEntities().size());
-        graph.draw(shape, 50, Gdx.graphics.getHeight() - 50 - graph.getHeight());
+        graph.draw(shape, Gdx.graphics.getWidth() - 50 - graph.getWidth(), Gdx.graphics.getHeight() - 50 - graph.getHeight());
         shape.end();
     }
 }
