@@ -183,7 +183,6 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
         }
         
         //roll index
-        trail.stepCount++;
         trail.indexHead++;
         if (trail.indexHead >= trail.path.length) {
             trail.indexHead = 0;

@@ -17,8 +17,6 @@ public class TrailComponent implements Component {
     //the current head of the path
     public int indexHead;
     
-    public int stepCount;
-    
     public int zOrder;
     
     public Style style;
