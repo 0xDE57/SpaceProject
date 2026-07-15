@@ -139,21 +139,28 @@ public class TestVoronoiScreen extends MyScreenAdapter {
     GlyphLayout layout = new GlyphLayout();
 
     //all points that define a polygon and any point inside the polygon
-    final DoubleArray points = new DoubleArray(true, 5000);
+    //final DoubleArray points = new DoubleArray(true, 5000);
+    final FloatArray points = new FloatArray(true, 5000);
     final Array<Color> colorTest = new Array<>();
     final Array<Color> colors = Colors.getColors().values().toArray();
 
     //triangulation
-    final DoubleDelaunayTriangulator delaunay = new DoubleDelaunayTriangulator();
-    IntArray triangles;
+    //final DoubleDelaunayTriangulator delaunay = new DoubleDelaunayTriangulator();
+    final DelaunayTriangulator delaunay = new DelaunayTriangulator(); 
+    ShortArray triangles;
+    //IntArray triangles;
     final ArrayList<DelaunayCell> dCells = new ArrayList<>();
-
+    final int maxVertices = 32767;
+    
     //convex hull
-    double[] hull; //high precision for calculation
-    float[] floatHull; //low precision for render
-    final DoublePolygon hullPoly = new DoublePolygon();
+    //double[] hull; //high precision for calculation
+    float[] hull;
+    //float[] floatHull; //low precision for render
+    final Polygon hullPoly = new Polygon();
+    //final DoublePolygon hullPoly = new DoublePolygon();
     final Vector2 centroid = new Vector2();
-    final DoubleConvexHull convex = new DoubleConvexHull();
+    //final DoubleConvexHull convex = new DoubleConvexHull();
+    final ConvexHull convex = new ConvexHull();
     long end = 0;
 
 
@@ -304,7 +311,8 @@ public class TestVoronoiScreen extends MyScreenAdapter {
         //calculate the convex hull of all the points
         //center around centroid in middle of screen
         hull = convex.computePolygon(points, false).toArray();//<--system.arraycopy()
-        PolygonUtil.doublePolygonCentroid(hull, 0, hull.length, centroid);
+        GeometryUtils.polygonCentroid(hull, 0, hull.length, centroid);
+        //PolygonUtil.doublePolygonCentroid(hull, 0, hull.length, centroid);
         //Gdx.app.log(getClass().getSimpleName(), "isCCW?" + GeometryUtils.isCCW(hull, 0, hull.length));
         if (addCentroid) {
             points.add(centroid.x, centroid.y);
@@ -346,8 +354,13 @@ public class TestVoronoiScreen extends MyScreenAdapter {
 
 
         //apply delaunay triangulation to points
+        //triangles = delaunay.computeTriangles(points, false);
+        if (points.size > maxVertices - 2) {
+            Gdx.app.error(getClass().getSimpleName(), points.size + " too big. calculation ignored!");
+            return;
+        }
         triangles = delaunay.computeTriangles(points, false);
-
+        
         //create cells for each triangle
         dCells.clear();
         int discard = 0;
@@ -358,9 +371,12 @@ public class TestVoronoiScreen extends MyScreenAdapter {
             int p2 = triangles.get(i + 1) * 2;
             int p3 = triangles.get(i + 2) * 2;
 
-            float p1x = (float) points.get(p1), p1y = (float) points.get(p1 + 1); // xy: 0, 1
-            float p2x = (float) points.get(p2), p2y = (float) points.get(p2 + 1); // xy: 2, 3
-            float p3x = (float) points.get(p3), p3y = (float) points.get(p3 + 1); // xy: 4, 5
+            //float p1x = (float) points.get(p1), p1y = (float) points.get(p1 + 1); // xy: 0, 1
+            //float p2x = (float) points.get(p2), p2y = (float) points.get(p2 + 1); // xy: 2, 3
+            //float p3x = (float) points.get(p3), p3y = (float) points.get(p3 + 1); // xy: 4, 5
+            float p1x = points.get(p1), p1y = points.get(p1 + 1); // xy: 0, 1
+            float p2x = points.get(p2), p2y = points.get(p2 + 1); // xy: 2, 3
+            float p3x = points.get(p3), p3y = points.get(p3 + 1); // xy: 4, 5
             //discard duplicate points
             if     ((MathUtils.isEqual(p1x, p2x) && MathUtils.isEqual(p1y, p2y)) || // p1 == p2 or
                     (MathUtils.isEqual(p1x, p3x) && MathUtils.isEqual(p1y, p3y)) || // p1 == p3 or
@@ -413,12 +429,13 @@ public class TestVoronoiScreen extends MyScreenAdapter {
         hullPoly.setVertices(hull);
         hullPoly.getCentroid(centroid); //-> GeometryUtils.polygonCentroid(hull, 0, hull.length, centroid);
 
+        /*
         //make float copy of hull
         double[] hullVertices = hullPoly.getVertices();
         floatHull = new float[hullVertices.length];
         for (int i = 0; i < hullVertices.length; i++) {
             floatHull[i] = (float) hullVertices[i];
-        }
+        }*/
 
         end = System.currentTimeMillis() - start;
         if (end > 16) {
@@ -438,7 +455,8 @@ public class TestVoronoiScreen extends MyScreenAdapter {
      */
     public boolean collideWithHull(Vector2 a, Vector2 b, Vector2 intersect) {
         //for each line segment between two vertices
-        double[] vertices = hullPoly.getTransformedVertices();
+        float[] vertices = hullPoly.getTransformedVertices();
+        //double[] vertices = hullPoly.getTransformedVertices();
         for (int v = 0; v < vertices.length - 2; v += 2) {
             double xA = vertices[v];
             double yA = vertices[v + 1];
@@ -480,7 +498,8 @@ public class TestVoronoiScreen extends MyScreenAdapter {
             }
         } else {
             // check collision with convex hull, only draw within hull
-            double[] vertices = hullPoly.getTransformedVertices();
+            //double[] vertices = hullPoly.getTransformedVertices();
+            float[] vertices = hullPoly.getTransformedVertices();
             for (int v = 0; v < vertices.length - 2; v += 2) {
                 double xA = vertices[v];
                 double yA = vertices[v + 1];
@@ -835,7 +854,7 @@ public class TestVoronoiScreen extends MyScreenAdapter {
         //shape.begin(ShapeType.Line);
         if (drawHull && hull != null) {
             shape.setColor(Color.RED);
-            shape.polyline(floatHull);
+            shape.polyline(hull);
         }
 
         if (drawTriangleInfo) {
@@ -1137,7 +1156,8 @@ public class TestVoronoiScreen extends MyScreenAdapter {
                 return;
             }
             hull = convex.computePolygon(points, false).toArray(); //sorted seems to have no impact on
-            PolygonUtil.doublePolygonCentroid(hull, 0, hull.length, centroid);
+            //PolygonUtil.doublePolygonCentroid(hull, 0, hull.length, centroid);
+            GeometryUtils.polygonCentroid(hull, 0, hull.length, centroid);
             for (int i = 0; i < points.size; i+= 2) {
                 points.set(i, centroid.x - points.get(i) + width*0.5f);
                 points.set(i + 1, centroid.y - points.get(i + 1) + height*0.5f);
@@ -1482,10 +1502,12 @@ public class TestVoronoiScreen extends MyScreenAdapter {
             stringBuilder.setLength(0);
             stringBuilder.append(Gdx.app.getClipboard().getContents());
             String[] csv = stringBuilder.toString().split(",");
-            DoubleArray newPoints = new DoubleArray();
+            //DoubleArray newPoints = new DoubleArray();
+            FloatArray newPoints = new FloatArray();
             try {
                 for (String value : csv) {
-                    double parsed = Double.parseDouble(value);
+                    //double parsed = Double.parseDouble(value);
+                    float parsed = Float.parseFloat(value);
                     newPoints.add(parsed);
                 }
             } catch (NumberFormatException ex) {
