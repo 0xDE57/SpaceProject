@@ -152,6 +152,42 @@
       ]
     },
     {
+      "component": "PassiveShieldComponent",
+      "name": "Passive Regen Shield",
+      "description": "Take the edge off the initial hit with a rechargeable overshield!\n\nProtection: [%s]\nCooldown: [%s]s",
+      "cost": 25000,
+      "levels": [
+        {
+          "level": 1,
+          "properties": {
+            "protection": 25,
+            "cooldown": 20
+          }
+        },
+        {
+          "level": 2,
+          "properties": {
+            "protection": 50,
+            "cooldown": 15
+          }
+        },
+        {
+          "level": 3,
+          "properties": {
+            "protection": 75,
+            "cooldown": 12
+          }
+        },
+        {
+          "level": 4,
+          "properties": {
+            "protection": 100,
+            "cooldown": 10
+          }
+        }
+      ]
+    },
+    {
       "component": "HyperDriveComponent",
       "name": "Hyper-Drive",
       "description": "[%s]%s[]\nenable deep-space exploration.\n\nHold [%s][%s][] to activate.",
