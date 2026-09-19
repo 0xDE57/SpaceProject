@@ -672,6 +672,7 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
         }
 
         drawPlayerHealth(entity, barX, healthBarY, barWidth, barHeight);
+        drawPlayerPassiveShield(entity, barX, healthBarY, barWidth, barHeight);
         drawPlayerShield(entity, barX, healthBarY, barWidth, barHeight);
         drawPlayerAmmoBar(entity, barX, ammoBarY, barWidth, barHeight);
 
@@ -746,6 +747,17 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
         }
 
         shape.rect(x, y, width * ratioHP, height);
+    }
+    
+    private void drawPlayerPassiveShield(Entity entity, float x, float y, float width, float height) {
+        PassiveShieldComponent shield = Mappers.passiveShield.get(entity);
+        if (shield == null) {
+            return;
+        }
+        
+        float ratioShield = shield.shield / shield.maxShield;
+        shape.setColor(1, 1, 0, 1);
+        shape.rect(x, y, width * ratioShield, height);
     }
 
     private void drawPlayerShield(Entity entity, float x, float y, float width, float height) {

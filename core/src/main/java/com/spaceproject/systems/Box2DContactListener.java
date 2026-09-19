@@ -411,13 +411,36 @@ public class Box2DContactListener implements ContactListener {
 
     public static HealthComponent damage(Engine engine, Entity entity, Entity source, float damage, Vector2 location, Body damagedBody) {
         if (damage <= 0) return null;
+        
         HealthComponent health = Mappers.health.get(entity);
         if (health == null) return null;
+        
         if (health.health <= 0) {
             if (entity.getComponent(RemoveComponent.class) == null) {
                 Gdx.app.error(Box2DContactListener.class.getSimpleName(), "damage to [" + DebugUtil.objString(entity) + "] ignored. ENTITY NOT MARKED FOR REMOVAL!");
             }
             return null;
+        }
+        
+        PassiveShieldComponent passiveShield = Mappers.passiveShield.get(entity);
+        if (passiveShield != null && passiveShield.shield >= 0) {
+            passiveShield.shield = MathUtils.clamp(passiveShield.shield, 0, passiveShield.maxShield);//safety clamp for sanity
+            float remainingDamage = damage - passiveShield.shield;
+            //Gdx.app.debug("", "shield: " + passiveShield.shield + ", damage: " + damage + ", remain:" + remainingDamage);
+            passiveShield.shield -= damage;
+            passiveShield.cooldownDamaged.reset();
+            if (passiveShield.shield <= 0) {
+                //break passive shield
+                passiveShield.shield = 0;
+                passiveShield.cooldownBroken.reset();
+                //todo: passive shield break sound
+                Gdx.app.debug("", "shield broken");
+            }
+            
+            //pass on any remaining damage after shield has absorbed
+            damage = remainingDamage;
+            
+            if (damage <= 0) return null;
         }
 
         StatsComponent stats = Mappers.stat.get(entity);

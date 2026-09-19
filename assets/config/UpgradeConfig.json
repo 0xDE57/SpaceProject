@@ -136,6 +136,42 @@
       ]
     },
     {
+      "component": "PassiveShieldComponent",
+      "name": "Passive Shield",
+      "description": "todo",
+      "cost": 25000,
+      "levels": [
+        {
+          "level": 1,
+          "properties": {
+            "maxShield": 50,
+            "restoreRate": 1
+          }
+        },
+        {
+          "level": 2,
+          "properties": {
+            "maxShield": 100,
+            "restoreRate": 2
+          }
+        },
+        {
+          "level": 3,
+          "properties": {
+            "maxShield": 150,
+            "restoreRate": 4
+          }
+        },
+        {
+          "level": 4,
+          "properties": {
+            "maxShield": 200,
+            "restoreRate": 6
+          }
+        }
+      ]
+    },
+    {
       "component": "ShieldComponent",
       "name": "Active Shield",
       "description": "[%s]%s[]\nprotect your ship from damage.\n\nHold [%s][%s][] to activate.",

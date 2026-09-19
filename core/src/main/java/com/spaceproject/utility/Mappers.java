@@ -30,6 +30,7 @@ public class Mappers {
     public static final ComponentMapper<MapComponent> map = ComponentMapper.getFor(MapComponent.class);
     public static final ComponentMapper<OrbitComponent> orbit = ComponentMapper.getFor(OrbitComponent.class);
     public static final ComponentMapper<ParticleComponent> particle = ComponentMapper.getFor(ParticleComponent.class);
+    public static final ComponentMapper<PassiveShieldComponent> passiveShield = ComponentMapper.getFor(PassiveShieldComponent.class);
     public static final ComponentMapper<PhysicsComponent> physics = ComponentMapper.getFor(PhysicsComponent.class);
     public static final ComponentMapper<PlanetComponent> planet = ComponentMapper.getFor(PlanetComponent.class);
     public static final ComponentMapper<RespawnComponent> respawn = ComponentMapper.getFor(RespawnComponent.class);

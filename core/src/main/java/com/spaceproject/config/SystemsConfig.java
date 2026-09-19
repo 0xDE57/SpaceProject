@@ -40,6 +40,7 @@ public class SystemsConfig extends Config {
         systems.add(new SysCFG(ShipControlSystem.class, 50, true, true, true));
         systems.add(new SysCFG(BarrelRollSystem.class, 52, true, true, true));
         systems.add(new SysCFG(ShieldSystem.class, 53, true, true, true));
+        systems.add(new SysCFG(PassiveShieldSystem.class, 54, true, true, true));
         systems.add(new SysCFG(CannonSystem.class, 55, true, true, true));
         systems.add(new SysCFG(HyperDriveSystem.class, 59, true, true, true));
         
