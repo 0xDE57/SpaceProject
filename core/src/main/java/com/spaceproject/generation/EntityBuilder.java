@@ -30,7 +30,8 @@ public class EntityBuilder {
     private static final EngineConfig engineCFG = SpaceProject.configManager.getConfig(EngineConfig.class);
     private static final EntityConfig entityCFG = SpaceProject.configManager.getConfig(EntityConfig.class);
     private static final CelestialConfig celestCFG = SpaceProject.configManager.getConfig(CelestialConfig.class);
-
+    private static final DebugConfig debugConfig = SpaceProject.configManager.getConfig(DebugConfig.class);
+    
     //region ships
     public static Array<Entity> createBasicShip(float x, float y, boolean inSpace) {
         return createBasicShip(x, y, null, inSpace);
@@ -491,7 +492,7 @@ public class EntityBuilder {
         return entity;
     }
 
-    public static Entity createAsteroid(float x, float y, float velX, float velY, float angle, float[] vertices, ItemComponent.Resource resource, boolean revealed) {
+    public static Entity createAsteroid(float x, float y, float velX, float velY, float angle, float angularVel, float[] vertices, ItemComponent.Resource resource, boolean revealed) {
         Entity entity = new Entity();
 
         TransformComponent transform = new TransformComponent();
@@ -500,11 +501,10 @@ public class EntityBuilder {
         entity.add(transform);
     
         /*
-        NOTE! Box2D expects Polygons vertices are stored with a counter clockwise winding (CCW).
+        NOTE! Box2D expects Polygons vertices are stored with a counterclockwise winding (CCW).
         We must be careful because the notion of CCW is with respect to a right-handed coordinate
         system with the z-axis pointing out of the plane.
         */
-        //GeometryUtils.ensureCCW(vertices); //appears to do nothing...
         Polygon polygon = new Polygon(vertices);
         float area = Math.abs(GeometryUtils.polygonArea(polygon.getVertices(), 0, polygon.getVertices().length));
         AsteroidComponent asteroid = new AsteroidComponent();
@@ -523,6 +523,7 @@ public class EntityBuilder {
                 GameScreen.box2dWorld, entity);
         asteroid.centerOfMass = physics.body.getLocalCenter().cpy();
         physics.body.setLinearVelocity(velX, velY);
+        physics.body.setAngularVelocity(angularVel);
         entity.add(physics);
 
         HealthComponent health = new HealthComponent();
@@ -542,12 +543,12 @@ public class EntityBuilder {
 
     static final ConvexHull convex = new ConvexHull();
     static final Vector2 center = new Vector2();
-    public static Entity createAsteroid(long seed, float x, float y, float velX, float velY, float size) {
+    public static Entity createAsteroid(long seed, float x, float y, float velX, float velY, float angularVel, float size) {
         int maxPoints = 7;//Box2D poly vert limit is 7: Assertion `3 <= count && count <= 8' failed.
         FloatArray points = new FloatArray();
         PolygonClass poly;
 
-        DebugConfig debugConfig = SpaceProject.configManager.getConfig(DebugConfig.class);
+        
         //debugConfig.spawnRegularBodies = true;
         //debugConfig.spawnPenrose = true;
         if (debugConfig.spawnRegularBodies) {
@@ -623,7 +624,7 @@ public class EntityBuilder {
         //float area = Math.abs(GeometryUtils.polygonArea(polygon.getVertices(), 0, polygon.getVertices().length));
 
         ItemComponent.Resource resource = debugConfig.glassOnly ? ItemComponent.Resource.GLASS : ItemComponent.Resource.random();
-        return createAsteroid(x, y, velX, velY, MathUtils.random(MathUtils.PI2), hull, resource, false);
+        return createAsteroid(x, y, velX, velY, MathUtils.random(MathUtils.PI2), angularVel, hull, resource, false);
     }
 
     /*todo: should we make custom poly to avoid toArray() causing a system System.arraycopy()

@@ -61,6 +61,7 @@ public class AsteroidBeltSystem extends EntitySystem {
     private final float maxDriftAngle = 0.05f; //angular drift when shatter
     private final float minDriftAngle = 0.01f;
     private final Vector2 center = new Vector2();
+    private final Vector2 childCenter = new Vector2();
 
     private float minArea = Float.MAX_VALUE, maxArea = Float.MIN_VALUE;
     private float totalArea = 0;
@@ -209,7 +210,7 @@ public class AsteroidBeltSystem extends EntitySystem {
         int size = MathUtils.random(14, 120);//NOTE: does not guarantee final area
         long seed = MyMath.getSeed(x, y);
         //todo: pool asteroids. note box2d body is already pooled internally, but we can pool the entity itself to eliminate new
-        Entity asteroid = EntityBuilder.createAsteroid(seed, x, y, velX, velY, size);
+        Entity asteroid = EntityBuilder.createAsteroid(seed, x, y, velX, velY, 0, size);
         Polygon polygon = asteroid.getComponent(AsteroidComponent.class).polygon;
         float area = Math.abs(GeometryUtils.polygonArea(polygon.getVertices(), 0, polygon.getVertices().length));
         if (area > maxArea) {
@@ -239,8 +240,8 @@ public class AsteroidBeltSystem extends EntitySystem {
     }
 
     private void spawnChildAsteroid(Vector2 parentPos, Vector2 parentVel, float parentAngle, float parentAngularVel, AsteroidComponent asteroidComponent, float[] vertices) {
-        /* todo: re shatter issues; if we turn on b2d debug we can see the velocity is not the origin of child bodies
-        NOTE: Box2D expects Polygons vertices are stored with a counter clockwise winding (CCW).
+        /*
+        NOTE: Box2D expects Polygons vertices are stored with a counterclockwise winding (CCW).
         We must be careful because the notion of CCW is with respect to a right-handed
         coordinate system with the z-axis pointing out of the plane.
 
@@ -256,34 +257,14 @@ public class AsteroidBeltSystem extends EntitySystem {
         You may also specify the body's angle in radians, which is not affected by the position of the center of mass.
         If you later change the mass properties of the body, then the center of mass may move on the body,
         but the origin position does not change and the attached shapes and joints do not move.
-
-        asteroid.centerOfMass == B2D::body->GetLocalCenter()
-
-        Vector2 center = new Vector2();
-        Polygon poly = new Polygon();
-        poly.getCentroid(center); -> transformed vertices -> GeometryUtils.polygonCentroid()
-
-        GeometryUtils.polygonCentroid()
-
-        API Addition: Polygon methods setVertex, getVertex, getVertexCount, getCentroid.
-        API Addition: GeometryUtils,polygons isCCW, ensureClockwise, reverseVertices
-        https://libgdx.com/news/2022/05/gdx-1-11
-
-        computeTriangles():
-            - Duplicate points will result in undefined behavior. sorted – If false, the points will be sorted by the x coordinate,
-              which is required by the triangulation algorithm. If sorting is done the input array is not modified,
-              the returned indices are for the input array, and count*2 additional working memory is needed.
-            - Returns: triples of indices into the points that describe the triangles in clockwise order.
         */
-        int child = 0;
-        float childArea = 0;
 
         //copy float to double for higher precision triangulation
-        double[] vertsFloat = new double[vertices.length];
-        for (int i = 0; i < vertsFloat.length; i++) {
-            vertsFloat[i] = vertices[i];
+        double[] vertsDouble = new double[vertices.length];
+        for (int i = 0; i < vertsDouble.length; i++) {
+            vertsDouble[i] = vertices[i];
         }
-        IntArray triangleIndices = delaunay.computeTriangles(vertsFloat, false);
+        IntArray triangleIndices = delaunay.computeTriangles(vertsDouble, false);
 
         //create cells for each triangle
         for (int index = 0; index < triangleIndices.size; index += 3) {
@@ -305,40 +286,41 @@ public class AsteroidBeltSystem extends EntitySystem {
                 //../b2PolygonShape.cpp:158: void b2PolygonShape::Set(const b2Vec2*, int32): Assertion `false' failed.
                 continue;
             }
-            child++;
 
-
-            //todo: discard shards / slivers
-            // if (ratio between length and width > threshold) reject
-
-            boolean reCenter = false;
-            if (reCenter) {
-                //shift vertices to be centered
-                GeometryUtils.triangleCentroid(
-                        hull[0], hull[1],
-                        hull[2], hull[3],
-                        hull[4], hull[5],
-                        center);
-                for (int j = 0; j < hull.length; j += 2) {
-                    //todo: this is a fix for #30...
-                    // but causes #2 to get worse and places bodies incorrect relative to parent
-                    hull[j] -= center.x;
-                    hull[j + 1] -= center.y;
-                }
-                //center.rotateRad(parentAngle);
-                //parentPos.rotateAroundRad(center, parentAngle);
-                //todo: rotate center relative to parent by angle?
-                //Vector2 pos = parentBody.getPosition().cpy();//.mulAdd(center.rotateAroundRad(parentBody.getPosition(), parentBody.getAngle()), 0.1f);
-                //center.rotateAroundRad(parentBody.getPosition(), parentBody.getAngle());
-                //Vector2 pos = parentBody.getPosition().cpy().add(center);
-                //Vector2 vel = parentBody.getLinearVelocity().cpy();
+            //todo: discard shards / slivers?
+            //float quality = GeometryUtils.triangleQuality(hull[0], hull[1], hull[2], hull[3], hull[4], hull[5]);
+            // if (quality < threshold) continue;
+            
+            //shift vertices to be centered
+            GeometryUtils.triangleCentroid(
+                    hull[0], hull[1],
+                    hull[2], hull[3],
+                    hull[4], hull[5],
+                    center);
+            
+            for (int j = 0; j < hull.length; j += 2) {
+                hull[j] -= center.x;
+                hull[j + 1] -= center.y;
             }
-
-            float angularDrift = Math.max(MathUtils.random(-maxDriftAngle, maxDriftAngle), minDriftAngle);
-            Entity childAsteroid = EntityBuilder.createAsteroid(parentPos.x, parentPos.y, parentVel.x, parentVel.y, parentAngle, hull, asteroidComponent.composition, true);
-            childAsteroid.getComponent(PhysicsComponent.class).body.setAngularVelocity(parentAngularVel + angularDrift);
+            
+            // adjust local offset relative to parent asteroid
+            childCenter.set(center).rotateRad(parentAngle).add(parentPos);
+            
+            //add some angular drift relative to parent angular momentum
+            float angularDrift = MathUtils.random(minDriftAngle, maxDriftAngle);
+            if (MathUtils.randomBoolean()) {
+                angularDrift = -angularDrift;
+            }
+            angularDrift += parentAngularVel;
+            
+            Entity childAsteroid = EntityBuilder.createAsteroid(
+                childCenter.x, childCenter.y,
+                parentVel.x, parentVel.y,
+                parentAngle, angularDrift,
+                hull, asteroidComponent.composition, true);
+            
             getEngine().addEntity(childAsteroid);
-
+            
             //fracture damage model: should extra damage be passed down to children?
             //eg: parent hp = 100, takes 150 damage = 50 damage
             // for each child asteroid, apply (remaining damage / number of children)
