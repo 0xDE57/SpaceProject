@@ -9,9 +9,10 @@ import com.badlogic.gdx.physics.box2d.PolygonShape;
 
 public class PolygonUtil {
     
-    static final Vector2 tempcenter = new Vector2();
-    static final Vector2 tempvec1 = new Vector2();
-    static final Vector2 tempvec2 = new Vector2();
+    static final Vector2 tempCenter = new Vector2();
+    static final Vector2 tempVec1 = new Vector2();
+    static final Vector2 tempVec2 = new Vector2();
+    static final Rectangle tempRect = new Rectangle();
     
     public static BoundingBox calculateBoundingBox(Body body) {
         BoundingBox boundingBox = null;
@@ -87,20 +88,84 @@ public class PolygonUtil {
         return bounds;
     }
     
+    public static Rectangle localBounds(float[] vertices) {
+        float minX = Float.MAX_VALUE;
+        float minY = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE;
+        float maxY = -Float.MAX_VALUE;
+        
+        for (int i = 0; i < vertices.length; i += 2) {
+            minX = Math.min(minX, vertices[i]);
+            maxX = Math.max(maxX, vertices[i]);
+            minY = Math.min(minY, vertices[i + 1]);
+            maxY = Math.max(maxY, vertices[i + 1]);
+        }
+        tempRect.set(minX, minY, maxX - minX, maxY - minY);
+        return tempRect;
+    }
+    
+    public static boolean containsNear(float[] vertices, int length, float x, float y, float minimumDistance) {
+        float minimumDistanceSquared = minimumDistance * minimumDistance;
+        
+        for (int i = 0; i < length; i += 2) {
+            float dx = vertices[i] - x;
+            float dy = vertices[i + 1] - y;
+            
+            if (dx * dx + dy * dy < minimumDistanceSquared) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    static final float MIN_POINT_DISTANCE = 2f;
+    static final float MIN_TRIANGLE_AREA = 10f;
+    public static boolean validTriangle(float[] triangle) {
+        if (triangle.length != 6) {
+            return false;
+        }
+        
+        // Reject duplicate or almost-duplicate vertices.
+        if (containsNear(
+            triangle,
+            2,
+            triangle[2],
+            triangle[3],
+            MIN_POINT_DISTANCE)) {
+            return false;
+        }
+        
+        if (containsNear(
+            triangle,
+            4,
+            triangle[4],
+            triangle[5],
+            MIN_POINT_DISTANCE)) {
+            return false;
+        }
+        
+        // Twice the signed area of the triangle.
+        float area2 = (triangle[2] - triangle[0]) * (triangle[5] - triangle[1])
+                - (triangle[4] - triangle[0]) * (triangle[3] - triangle[1]);
+        
+        return Math.abs(area2) >= MIN_TRIANGLE_AREA;
+    }
+    
     /***
      * https://stackoverflow.com/a/48542735
      */
     public static boolean overlaps(Polygon polygon, Circle circle) {
         float[] vertices = polygon.getTransformedVertices();
-        tempcenter.set(circle.x, circle.y);
+        tempCenter.set(circle.x, circle.y);
         float squareRadius = circle.radius * circle.radius;
         for (int i = 0; i < vertices.length; i += 2) {
             if (i == 0) {
-                if (Intersector.intersectSegmentCircle(tempvec1.set(vertices[vertices.length - 2], vertices[vertices.length - 1]),
-                        tempvec2.set(vertices[i], vertices[i + 1]), tempcenter, squareRadius))
+                if (Intersector.intersectSegmentCircle(tempVec1.set(vertices[vertices.length - 2], vertices[vertices.length - 1]),
+                        tempVec2.set(vertices[i], vertices[i + 1]), tempCenter, squareRadius))
                     return true;
             } else {
-                if (Intersector.intersectSegmentCircle(tempvec1.set(vertices[i - 2], vertices[i - 1]), tempvec2.set(vertices[i], vertices[i + 1]), tempcenter, squareRadius))
+                if (Intersector.intersectSegmentCircle(tempVec1.set(vertices[i - 2], vertices[i - 1]), tempVec2.set(vertices[i], vertices[i + 1]), tempCenter, squareRadius))
                     return true;
             }
         }

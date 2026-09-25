@@ -1,27 +1,48 @@
 package com.spaceproject.systems;
 
-import com.badlogic.ashley.core.*;
+import com.badlogic.ashley.core.Engine;
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.EntitySystem;
+import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.*;
-import com.badlogic.gdx.utils.*;
+import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.IntArray;
+import com.badlogic.gdx.utils.Pool;
+import com.badlogic.gdx.utils.Pools;
 import com.spaceproject.SpaceProject;
-import com.spaceproject.components.*;
+import com.spaceproject.components.AsteroidBeltComponent;
+import com.spaceproject.components.AsteroidComponent;
+import com.spaceproject.components.PhysicsComponent;
+import com.spaceproject.components.TransformComponent;
 import com.spaceproject.config.DebugConfig;
 import com.spaceproject.generation.EntityBuilder;
 import com.spaceproject.math.DoubleDelaunayTriangulator;
 import com.spaceproject.math.MyMath;
+import com.spaceproject.math.PolygonUtil;
 import com.spaceproject.screens.GameScreen;
 import com.spaceproject.utility.DebugUtil;
 import com.spaceproject.utility.Mappers;
 import com.spaceproject.utility.SimpleTimer;
 
-import java.lang.StringBuilder;
-
 
 public class AsteroidBeltSystem extends EntitySystem {
-
+    
+    private enum ShatterMode {
+        CENTROID,
+        RANDOM,
+        INNER_VERTICES,
+        INNER_EDGES;
+        //CONTACT_POINT //todo: add point(s) near hit contact area
+        
+        static final ShatterMode[] VALUES = ShatterMode.values();
+        public static ShatterMode random() {
+            return VALUES[MathUtils.random(VALUES.length - 1)];
+        }
+    }
+    
     static class AsteroidRemovedQueue implements Pool.Poolable {
         public AsteroidComponent asteroidComponent;
         public Vector2 position;
@@ -223,19 +244,146 @@ public class AsteroidBeltSystem extends EntitySystem {
         getEngine().addEntity(asteroid);
         return asteroid;
     }
-
+    
+    private float[] addCentroidPoint(float[] vertices) {
+        int length = vertices.length;
+        float[] newPoly = new float[length + 2];
+        
+        System.arraycopy(vertices, 0, newPoly, 0, length);
+        
+        GeometryUtils.polygonCentroid(vertices, 0, length, center);
+        
+        newPoly[length] = center.x;
+        newPoly[length + 1] = center.y;
+        
+        return newPoly;
+    }
+    
+    private static final float MIN_POINT_DISTANCE = 2f;
+    private float[] addRandomPoints(float[] vertices, int newShatterPoints) {
+        int length = vertices.length;
+        float[] newPoly = new float[length + (newShatterPoints * 2)];
+        System.arraycopy(vertices, 0, newPoly, 0, length);
+        
+        GeometryUtils.polygonCentroid(vertices, 0, length, center);
+        Rectangle bounds = PolygonUtil.localBounds(vertices);
+        
+        int pointsAdded = 0;
+        int maxAttempts = newShatterPoints * 100;
+        
+        for (int attempt = 0;
+             attempt < maxAttempts && pointsAdded < newShatterPoints;
+             attempt++) {
+            
+            // width/height are sizes, so add them to x/y.
+            float x = MathUtils.random(bounds.x, bounds.x + bounds.width);
+            float y = MathUtils.random(bounds.y, bounds.y + bounds.height);
+            
+            // Test against the raw local-space vertices.
+            if (!Intersector.isPointInPolygon(vertices, 0, vertices.length, x, y)) {
+                continue;
+            }
+            
+            // Avoid nearly duplicate points, which can produce invalid or zero-area Delaunay triangles.
+            if (PolygonUtil.containsNear(newPoly, length + pointsAdded * 2, x, y, MIN_POINT_DISTANCE)) {
+                continue;
+            }
+            
+            int index = length + pointsAdded * 2;
+            newPoly[index] = x;
+            newPoly[index + 1] = y;
+            pointsAdded++;
+        }
+        
+        if (pointsAdded == 0) {
+            // Rejection sampling can theoretically fail for very thin polygons.
+            // Fall back to the centroid rather than adding an invalid point.
+            return addCentroidPoint(vertices);
+        }
+        
+        if (pointsAdded < newShatterPoints) {
+            // Do not leave unused zero-valued points in the polygon.
+            float[] resized = new float[length + pointsAdded * 2];
+            System.arraycopy(newPoly, 0, resized, 0, resized.length);
+            newPoly = resized;
+        }
+        
+        return newPoly;
+    }
+    
+    private final Vector2 tempVec = new Vector2();
+    private float[] addInnerVertexPoints(float[] vertices, float scale) {
+        int originalLength = vertices.length;
+        float[] newPoly = new float[originalLength * 2];
+        System.arraycopy(vertices, 0, newPoly, 0, originalLength);
+        
+        GeometryUtils.polygonCentroid(vertices, 0, originalLength, center);
+        int outputIndex = vertices.length;
+        
+        for (int index = 0; index < vertices.length; index += 2) {
+            tempVec.set(vertices[index], vertices[index + 1]);
+            
+            tempVec.sub(center).scl(scale).add(center);
+            
+            newPoly[outputIndex++] = tempVec.x;
+            newPoly[outputIndex++] = tempVec.y;
+        }
+        
+        return newPoly;
+    }
+    
+    private float[] addInnerEdgePoints(float[] vertices, float scale) {
+        int originalLength = vertices.length;
+        
+        float[] newPoly = new float[originalLength * 2];
+        System.arraycopy(vertices, 0, newPoly, 0, vertices.length);
+        
+        GeometryUtils.polygonCentroid(vertices, 0, originalLength, center);
+        
+        int outputIndex = vertices.length;
+        
+        for (int i = 0; i < vertices.length; i += 2) {
+            int next = (i + 2) % vertices.length;
+            
+            float edgeMidX = (vertices[i] + vertices[next]) * 0.5f;
+            float edgeMidY = (vertices[i + 1] + vertices[next + 1]) * 0.5f;
+            
+            float innerX = center.x + (edgeMidX - center.x) * scale;
+            float innerY = center.y + (edgeMidY - center.y) * scale;
+            
+            newPoly[outputIndex++] = innerX;
+            newPoly[outputIndex++] = innerY;
+        }
+        
+        return newPoly;
+    }
+    
     private void shatterAsteroid(Vector2 parentPos, Vector2 parentVel, float parentAngle, float parentAngularVel, AsteroidComponent asteroid) {
         //create new polygons from vertices + center point to "sub shatter" into smaller polygon shards
         float[] vertices = asteroid.polygon.getVertices();
-        int length = vertices.length;
-        float[] newPoly = new float[length + 2];
-        System.arraycopy(vertices, 0, newPoly, 0, length);
-
-        //center new point
-        GeometryUtils.polygonCentroid(vertices, 0, length, center);
-        newPoly[length] = center.x;
-        newPoly[length + 1] = center.y;
-
+        
+        //todo: could add some variation in parameters
+        // could also make shatter mode a property of asteroid composition so different colors break different
+        ShatterMode mode = ShatterMode.random();
+        float[] newPoly = null;
+        switch (mode) {
+            case CENTROID:
+                newPoly = addCentroidPoint(vertices);
+                break;
+            case RANDOM:
+                newPoly = addRandomPoints(vertices, 3);
+                break;
+            case INNER_VERTICES:
+                newPoly = addInnerVertexPoints(vertices, 0.5f);
+                break;
+            case INNER_EDGES:
+                newPoly = addInnerEdgePoints(vertices, 0.5f);
+                break;
+            default:
+                newPoly = addCentroidPoint(vertices);
+                break;
+        }
+        
         spawnChildAsteroid(parentPos, parentVel, parentAngle, parentAngularVel, asteroid, newPoly);
     }
 
@@ -277,6 +425,7 @@ public class AsteroidBeltSystem extends EntitySystem {
                     vertices[p3], vertices[p3 + 1]  // xy: 4, 5
             };
 
+            //if (PolygonUtil.validTriangle(hull)) continue;
             //discard duplicate points
             if ((hull[0] == hull[2] && hull[1] == hull[3]) || // p1 == p2 or
                     (hull[0] == hull[4] && hull[1] == hull[5]) || // p1 == p3 or
@@ -286,10 +435,22 @@ public class AsteroidBeltSystem extends EntitySystem {
                 //../b2PolygonShape.cpp:158: void b2PolygonShape::Set(const b2Vec2*, int32): Assertion `false' failed.
                 continue;
             }
-
+            
             //todo: discard shards / slivers?
             //float quality = GeometryUtils.triangleQuality(hull[0], hull[1], hull[2], hull[3], hull[4], hull[5]);
-            // if (quality < threshold) continue;
+            float childArea = GeometryUtils.triangleArea(hull[0], hull[1], hull[2], hull[3], hull[4], hull[5]);
+            if (childArea < minAsteroidSize * 0.5f /* || (quality < qualityThreshold)*/) {
+                //if too small just drop a resource
+                GeometryUtils.triangleCentroid(
+                    hull[0], hull[1],
+                    hull[2], hull[3],
+                    hull[4], hull[5],
+                    center);
+                childCenter.set(center).rotateRad(parentAngle).add(parentPos);
+                Entity drop = EntityBuilder.dropResource(childCenter, parentVel, asteroidComponent.composition, asteroidComponent.color);
+                getEngine().addEntity(drop);
+                continue;
+            }
             
             //shift vertices to be centered
             GeometryUtils.triangleCentroid(
