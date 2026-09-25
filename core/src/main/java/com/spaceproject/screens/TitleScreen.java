@@ -44,7 +44,7 @@ public class TitleScreen extends MyScreenAdapter {
     enum ForegroundAnimation {
         tree, delaunay, orbit, crossNoise, nbody;/*, asteroid*/;
 
-        static ForegroundAnimation[] VALUES = ForegroundAnimation.values();
+        static final ForegroundAnimation[] VALUES = ForegroundAnimation.values();
         
         public static ForegroundAnimation random() {
             return VALUES[MathUtils.random(VALUES.length - 1)];
