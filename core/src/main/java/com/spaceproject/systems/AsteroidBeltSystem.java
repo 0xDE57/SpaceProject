@@ -8,10 +8,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.*;
-import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.IntArray;
-import com.badlogic.gdx.utils.Pool;
-import com.badlogic.gdx.utils.Pools;
+import com.badlogic.gdx.utils.*;
 import com.spaceproject.SpaceProject;
 import com.spaceproject.components.AsteroidBeltComponent;
 import com.spaceproject.components.AsteroidComponent;
@@ -77,7 +74,7 @@ public class AsteroidBeltSystem extends EntitySystem {
     private final Pool<AsteroidRemovedQueue> removePool = Pools.get(AsteroidRemovedQueue.class, 100);
     private final Array<AsteroidRemovedQueue> spawnQ = new Array<>(false, 100);
 
-    private final DoubleDelaunayTriangulator delaunay = new DoubleDelaunayTriangulator();
+    private final DelaunayTriangulator delaunay = new DelaunayTriangulator();
     private final float minAsteroidSize = 100; //anything smaller than this will not create more
     private final float maxDriftAngle = 0.05f; //angular drift when shatter
     private final float minDriftAngle = 0.01f;
@@ -406,20 +403,15 @@ public class AsteroidBeltSystem extends EntitySystem {
         If you later change the mass properties of the body, then the center of mass may move on the body,
         but the origin position does not change and the attached shapes and joints do not move.
         */
-
-        //copy float to double for higher precision triangulation
-        double[] vertsDouble = new double[vertices.length];
-        for (int i = 0; i < vertsDouble.length; i++) {
-            vertsDouble[i] = vertices[i];
-        }
-        IntArray triangleIndices = delaunay.computeTriangles(vertsDouble, false);
+        
+        ShortArray triangleIndices = delaunay.computeTriangles(vertices, false);
 
         //create cells for each triangle
         for (int index = 0; index < triangleIndices.size; index += 3) {
             int p1 = triangleIndices.get(index) * 2;
             int p2 = triangleIndices.get(index + 1) * 2;
             int p3 = triangleIndices.get(index + 2) * 2;
-            float[] hull = new float[]{
+            float[] hull = new float[] {
                     vertices[p1], vertices[p1 + 1], // xy: 0, 1
                     vertices[p2], vertices[p2 + 1], // xy: 2, 3
                     vertices[p3], vertices[p3 + 1]  // xy: 4, 5
