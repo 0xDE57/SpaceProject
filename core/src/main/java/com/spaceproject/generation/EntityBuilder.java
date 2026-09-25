@@ -581,7 +581,7 @@ public class EntityBuilder {
                 float sin = MathUtils.sin(angle);
                 float cx = size, cy = 0;
                 for (int i = 0; i < segments; i++) {
-                    points.add(x + cx, y + cy);
+                    points.add(cx, cy);
                     float temp = cx;
                     cx = cos * cx - sin * cy;
                     cy = sin * temp + cos * cy;
