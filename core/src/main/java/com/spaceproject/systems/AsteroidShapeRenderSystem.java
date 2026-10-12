@@ -17,13 +17,15 @@ import com.spaceproject.screens.GameScreen;
 import com.spaceproject.ui.CustomShapeRenderer;
 import com.spaceproject.utility.Mappers;
 
-public class AsteroidRenderSystem extends IteratingSystem {
+public class AsteroidShapeRenderSystem extends IteratingSystem {
     
-    CustomShapeRenderer shapeRenderer;
-    Color tempColor;
-    Color defaultOutline;
-
-    public AsteroidRenderSystem() {
+    final CustomShapeRenderer shapeRenderer;
+    final Color tempColor;
+    final Color defaultOutline;
+    boolean renderFilled = true;
+    boolean renderTriangulated = true;
+    
+    public AsteroidShapeRenderSystem() {
         super(Family.all(AsteroidComponent.class, TransformComponent.class).get());
         shapeRenderer = new CustomShapeRenderer();
         tempColor = new Color();
@@ -33,30 +35,34 @@ public class AsteroidRenderSystem extends IteratingSystem {
     @Override
     public void update(float deltaTime) {
         shapeRenderer.setProjectionMatrix(GameScreen.cam.combined);
-
-        //todo: not all asteroids need transparency, only glass. could potentially sort enable blending for only glassteroids? profiler.
-        //enable transparency
-        Gdx.gl.glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-
-        //render filled inner poly
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        super.update(deltaTime);
-        shapeRenderer.end();
-
-        Gdx.gl.glDisable(GL20.GL_BLEND);
-
-        //render outer polygon triangle mesh outline
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        super.update(deltaTime);
-        shapeRenderer.end();
+        
+        if (renderFilled) {
+            //todo: not all asteroids need transparency, only glass. could potentially sort enable blending for only glassteroids? profiler.
+            //enable transparency
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+            
+            //render filled inner poly
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            super.update(deltaTime);
+            shapeRenderer.end();
+            
+            Gdx.gl.glDisable(GL20.GL_BLEND);
+        }
+        
+        if (renderTriangulated) {
+            //render outer polygon triangle mesh outline
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            super.update(deltaTime);
+            shapeRenderer.end();
+        }
     }
     
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
         AsteroidComponent asteroid = Mappers.asteroid.get(entity);
         TransformComponent transform = Mappers.transform.get(entity);
-
+        
         //set polygon translation and rotation
         Polygon polygon = asteroid.polygon;
         polygon.setRotation(transform.rotation * MathUtils.radiansToDegrees);
@@ -92,9 +98,9 @@ public class AsteroidRenderSystem extends IteratingSystem {
         } else {
             //mesh outline
             if (asteroid.revealed) {
-                tempColor = asteroid.color.cpy();
+                tempColor.set(asteroid.color);
             } else {
-                tempColor = defaultOutline.cpy();
+                tempColor.set(defaultOutline);
             }
         }
         shapeRenderer.fillPolygon(polygon.getTransformedVertices(), 0, polygon.getVertices().length, tempColor);

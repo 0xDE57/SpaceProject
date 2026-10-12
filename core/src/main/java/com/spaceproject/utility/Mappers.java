@@ -33,6 +33,7 @@ public class Mappers {
     public static final ComponentMapper<PassiveShieldComponent> passiveShield = ComponentMapper.getFor(PassiveShieldComponent.class);
     public static final ComponentMapper<PhysicsComponent> physics = ComponentMapper.getFor(PhysicsComponent.class);
     public static final ComponentMapper<PlanetComponent> planet = ComponentMapper.getFor(PlanetComponent.class);
+    public static final ComponentMapper<RemoveComponent> remove = ComponentMapper.getFor(RemoveComponent.class);
     public static final ComponentMapper<RespawnComponent> respawn = ComponentMapper.getFor(RespawnComponent.class);
     public static final ComponentMapper<ScreenTransitionComponent> screenTrans = ComponentMapper.getFor(ScreenTransitionComponent.class);
     public static final ComponentMapper<SeedComponent> seed = ComponentMapper.getFor(SeedComponent.class);

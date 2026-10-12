@@ -55,6 +55,20 @@ public class DebugTab extends HotKeyTab {
                 debugCFG.reflectAsteroidColor = toggleReflect.isChecked();
             }
         });
+        final VisCheckBox toggleSlice = new VisCheckBox("laser slices asteroid", debugCFG.sliceLaser);
+        toggleSlice.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                debugCFG.sliceLaser = toggleSlice.isChecked();
+            }
+        });
+        final VisCheckBox toggleSliceSingle = new VisCheckBox("slices turns off laser", debugCFG.singleSlice);
+        toggleSliceSingle.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                debugCFG.singleSlice = toggleSliceSingle.isChecked();
+            }
+        });
 
         final VisCheckBox toggleAsteroidSpawn = new VisCheckBox("spawn asteroid on [right-click]", debugCFG.spawnAsteroid);
         toggleAsteroidSpawn.addListener(new ChangeListener() {
@@ -227,7 +241,9 @@ public class DebugTab extends HotKeyTab {
         getContentTable().add(toggleInvincibility).left();
         getContentTable().add(toggleInfiniteFire).left().row();
         getContentTable().add(toggleDisco).left();
-        getContentTable().add(toggleReflect).left().row();
+        getContentTable().add(toggleReflect).left();
+        getContentTable().add(toggleSlice).left();
+        getContentTable().add(toggleSliceSingle).left().row();
         getContentTable().add(toggleAsteroidSpawn).left();
         getContentTable().add(toggleAsteroidCluster).left();
         getContentTable().add(toggleGlassOnly).left().row();

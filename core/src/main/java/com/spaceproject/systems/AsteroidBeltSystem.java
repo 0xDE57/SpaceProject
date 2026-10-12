@@ -16,13 +16,15 @@ import com.spaceproject.components.PhysicsComponent;
 import com.spaceproject.components.TransformComponent;
 import com.spaceproject.config.DebugConfig;
 import com.spaceproject.generation.EntityBuilder;
-import com.spaceproject.math.DoubleDelaunayTriangulator;
 import com.spaceproject.math.MyMath;
 import com.spaceproject.math.PolygonUtil;
+import com.spaceproject.math.Polyk;
 import com.spaceproject.screens.GameScreen;
 import com.spaceproject.utility.DebugUtil;
 import com.spaceproject.utility.Mappers;
 import com.spaceproject.utility.SimpleTimer;
+
+import java.util.List;
 
 
 public class AsteroidBeltSystem extends EntitySystem {
@@ -186,12 +188,14 @@ public class AsteroidBeltSystem extends EntitySystem {
 
     private void spawnAsteroidField(float x, float y, float angle, float velocity, int clusterSize, float range) {
         Vector2 vel = MyMath.vector(angle, velocity);
+        float vX = vel.x;
+        float vY = vel.y;
         for (int i = 0; i < clusterSize; i++) {
             float newX = MathUtils.random(x - range, x + range);
             float newY = MathUtils.random(y - range, y + range);
-            spawnAsteroid(newX, newY, vel.x, vel.y);
+            spawnAsteroid(newX, newY, vX, vY);
         }
-        Gdx.app.log(getClass().getSimpleName(), "spawn field: " + clusterSize);
+        Gdx.app.log(getClass().getSimpleName(), "spawn field: " + clusterSize + " vel: " + velocity);
     }
 
     public void destroyAsteroid(AsteroidComponent asteroid, Vector2 pos, Vector2 vel, float angle, float angularVel) {
@@ -230,7 +234,7 @@ public class AsteroidBeltSystem extends EntitySystem {
         //todo: pool asteroids. note box2d body is already pooled internally, but we can pool the entity itself to eliminate new
         Entity asteroid = EntityBuilder.createAsteroid(seed, x, y, velX, velY, 0, size);
         Polygon polygon = asteroid.getComponent(AsteroidComponent.class).polygon;
-        float area = Math.abs(GeometryUtils.polygonArea(polygon.getVertices(), 0, polygon.getVertices().length));
+        float area = GeometryUtils.polygonArea(polygon.getVertices(), 0, polygon.getVertices().length);
         if (area > maxArea) {
             maxArea = area;
             Gdx.app.debug(getClass().getSimpleName(), "new max area: " + area + " > " + DebugUtil.objString(asteroid));
@@ -319,7 +323,6 @@ public class AsteroidBeltSystem extends EntitySystem {
         
         for (int index = 0; index < vertices.length; index += 2) {
             tempVec.set(vertices[index], vertices[index + 1]);
-            
             tempVec.sub(center).scl(scale).add(center);
             
             newPoly[outputIndex++] = tempVec.x;
@@ -328,6 +331,91 @@ public class AsteroidBeltSystem extends EntitySystem {
         
         return newPoly;
     }
+    
+    final Vector2 localA = new Vector2();
+    final Vector2 localB = new Vector2();
+    
+    /**
+     * create 2 new polygons from the original vertices where a and b pass through
+     * if body is too small / not enough mass, child is not created
+     */
+    public boolean slicePolygon(float[] vertices, Vector2 a, Vector2 b, Vector2 parentPos, Vector2 parentVel, float parentAngle, float parentAngularVel, AsteroidComponent parentAsteroid) {
+        // Convert ray from world space to local polygon space
+        localA.set(a).sub(parentPos).rotateRad(-parentAngle);
+        localB.set(b).sub(parentPos).rotateRad(-parentAngle);
+
+        String debug = "slicePolygon called: vertices=" + java.util.Arrays.toString(vertices) +
+                "\n  area=" + GeometryUtils.polygonArea(vertices, 0, vertices.length) +
+                "\n  world ray: a=" + a + ", b=" + b +
+                "\n  local ray: a=" + localA + ", b=" + localB +
+                "\n  ray distance: " + a.dst(b);
+        //Gdx.app.debug(getClass().getSimpleName(), debug);
+        
+        // Find intersection points where the line ab crosses the polygon edges
+        List<float[]> childPolygons = Polyk.slice(vertices, localA.x, localA.y, localB.x, localB.y);
+        if (childPolygons == null) {
+            //Gdx.app.debug(getClass().getSimpleName(), debug);
+            Gdx.app.debug(getClass().getSimpleName(), "Null! polygon not sliced");
+            return false;
+        }
+        if (childPolygons.size() <= 1) {
+            Gdx.app.debug(getClass().getSimpleName(), debug);
+            Gdx.app.debug(getClass().getSimpleName(), "Less than 2 children, polygon not sliced");
+            //return false;
+        }
+        
+        boolean added = false;
+        for (float[] child : childPolygons) {
+            //float[] child = Polyk.removeDuplicateVertices(child0);
+            if (child.length < 6) {//3 * 2 - must have 3 points
+                Gdx.app.debug(getClass().getSimpleName(), debug);
+                Gdx.app.error(getClass().getSimpleName(), "SKIP! child polygon too few vertices: " + java.util.Arrays.toString(child));
+                continue;
+            }
+            if (child.length > 16) {//8 * 2 - no more than box2D maximum
+                Gdx.app.debug(getClass().getSimpleName(), debug);
+                Gdx.app.error(getClass().getSimpleName(), "SKIP! child polygon too many vertices: " + java.util.Arrays.toString(child));
+                continue;
+            }
+            float area = GeometryUtils.polygonArea(child, 0, child.length);
+            if (area < 1) {
+                Gdx.app.debug(getClass().getSimpleName(), debug);
+                Gdx.app.debug(getClass().getSimpleName(), "SKIP! child polygon too small: " + area + " - vertices: " + java.util.Arrays.toString(child));
+                added = true;// not really added but child still destroyed
+                continue;
+            }
+            /*
+            if (area > 20000) {
+                Gdx.app.error(getClass().getSimpleName(), debug);
+                Gdx.app.error(getClass().getSimpleName(), "SKIP! child polygon too big: " + area + " - vertices: " + java.util.Arrays.toString(child));
+                continue;
+            }*/
+            
+            //set origin and offsets correctly relative to parent, just like shattering
+            GeometryUtils.polygonCentroid(child, 0, child.length, center);
+            childCenter.set(center).rotateRad(parentAngle).add(parentPos);
+            for (int i = 0; i < child.length; i += 2) {
+                child[i] -= center.x;
+                child[i + 1] -= center.y;
+            }
+            //todo: sometimes sorting seems wrong, even if we ensure CCW
+            GeometryUtils.ensureCCW(child);
+            //maybe convex hull would cull "bad" vertex, and ensure CCW? but it appears to make it worse...
+            //float[] hull = convexHull.computePolygon(child, false).toArray();
+            
+            //Gdx.app.debug(getClass().getSimpleName(), "adding sliced child: " + childCenter.x + ", " + childCenter.y + "\n vertices: " + java.util.Arrays.toString(child) + " area: " + area);
+            Entity childAsteroidA = EntityBuilder.createAsteroid(
+                childCenter.x, childCenter.y,
+                parentVel.x, parentVel.y,
+                parentAngle, parentAngularVel,
+                child, parentAsteroid.composition, true);
+            getEngine().addEntity(childAsteroidA);
+            added = true;
+        }
+        
+        return added;
+    }
+    //private ConvexHull convexHull = new ConvexHull();
     
     private float[] addInnerEdgePoints(float[] vertices, float scale) {
         int originalLength = vertices.length;
@@ -362,7 +450,7 @@ public class AsteroidBeltSystem extends EntitySystem {
         //todo: could add some variation in parameters
         // could also make shatter mode a property of asteroid composition so different colors break different
         ShatterMode mode = ShatterMode.random();
-        float[] newPoly = null;
+        float[] newPoly;
         switch (mode) {
             case CENTROID:
                 newPoly = addCentroidPoint(vertices);
