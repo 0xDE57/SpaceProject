@@ -3,16 +3,18 @@ package com.spaceproject.components;
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.MathUtils;
+import com.spaceproject.systems.AsteroidBeltSystem;
+import space.earlygrey.shapedrawer.ShapeDrawer;
 
 public class ItemComponent implements Component {
 
     public enum Resource {
-        RED(1, Color.RED, 50, 1.5f, 0.5f, 0.5f, 1.5f, "break0.wav"),
-        GREEN(2, Color.GREEN, 60, 3f, 0.5f, 0.5f, 1.7f, "break1.wav"),
-        BLUE(3, new Color(0.1f, 0.3f, 1f, 1), 50, 1f, 0.4f, 0.5f, 1.3f, "break2.wav"),
-        SILVER(4, new Color(0.97f, 0.97f, 1, 1), 100, 0.3f, 0.3f, 0.8f, 1f, "break3.wav"),
-        GOLD(5, Color.GOLD, 400, 8f, 0.8f, 0.8f, 3, "break4.wav"),
-        GLASS(6, new Color(0.5f, 0.5f, 0.5f, 0.5f), 10, 0.1f, 0.05f, 1, 1.5f, "glass.wav");//
+        RED(1, Color.RED, 50, 1.5f, 0.5f, 0.5f, 1.5f, "break0.wav", AsteroidBeltSystem.ShatterMode.INNER_EDGES),
+        GREEN(2, Color.GREEN, 60, 3f, 0.5f, 0.5f, 1.7f, "break1.wav", AsteroidBeltSystem.ShatterMode.INNER_EDGES),
+        BLUE(3, new Color(0.1f, 0.3f, 1f, 1), 50, 1f, 0.4f, 0.5f, 1.3f, "break2.wav", AsteroidBeltSystem.ShatterMode.INNER_EDGES),
+        SILVER(4, new Color(0.97f, 0.97f, 1, 1), 100, 0.3f, 0.3f, 0.8f, 1f, "break3.wav", AsteroidBeltSystem.ShatterMode.INNER_VERTICES),
+        GOLD(5, Color.GOLD, 400, 8f, 0.8f, 0.8f, 3, "break4.wav", AsteroidBeltSystem.ShatterMode.INNER_VERTICES),
+        GLASS(6, new Color(0.5f, 0.5f, 0.5f, 0.5f), 10, 0.1f, 0.05f, 1, 1.5f, "glass.wav", AsteroidBeltSystem.ShatterMode.CENTROID);//
         //BLACK(7, Color.BLACK, 99999, -1, 99, 0, 0, "heavy?"); // bullets bounce (no damage) and laser absorb (no reflect) but does lots of damage (maybe 1.5x - 2x ?)
         //glass soft, bullets break easy, but laser refracts and passes through and does no damage
         //this forces you to get a laser to mine black!
@@ -73,8 +75,9 @@ public class ItemComponent implements Component {
         private final float albedo;
         private final float refractiveIndex;
         private final String sound; // ID for which sound to play when interacted with (asteroid hit, resource collected)
+        private final AsteroidBeltSystem.ShatterMode shatterMode;
 
-        Resource(int id, Color color, int value, float hardness, float density, float albeto, float refractiveIndex, String sound) {
+        Resource(int id, Color color, int value, float hardness, float density, float albeto, float refractiveIndex, String sound, AsteroidBeltSystem.ShatterMode shatterMode) {
             this.id = id;
             this.color = color;
             this.value = value;
@@ -83,6 +86,7 @@ public class ItemComponent implements Component {
             this.albedo = albeto;
             this.refractiveIndex = refractiveIndex;
             this.sound = sound;
+            this.shatterMode = shatterMode;
         }
 
         public int getId() {
@@ -115,6 +119,10 @@ public class ItemComponent implements Component {
 
         public String getSound() {
             return sound;
+        }
+        
+        public AsteroidBeltSystem.ShatterMode getShatterMode() {
+            return shatterMode;
         }
 
         public static Resource getById(int id) {

@@ -29,7 +29,7 @@ import java.util.List;
 
 public class AsteroidBeltSystem extends EntitySystem {
     
-    private enum ShatterMode {
+    public enum ShatterMode {
         CENTROID,
         RANDOM,
         INNER_VERTICES,
@@ -85,6 +85,8 @@ public class AsteroidBeltSystem extends EntitySystem {
 
     private float minArea = Float.MAX_VALUE, maxArea = Float.MIN_VALUE;
     private float totalArea = 0;
+    
+    boolean randomShatterMode = false;
 
     private final StringBuilder infoString = new StringBuilder();
     private int activePeak = 0;
@@ -449,7 +451,7 @@ public class AsteroidBeltSystem extends EntitySystem {
         
         //todo: could add some variation in parameters
         // could also make shatter mode a property of asteroid composition so different colors break different
-        ShatterMode mode = ShatterMode.random();
+        ShatterMode mode = randomShatterMode ? ShatterMode.random() : asteroid.composition.getShatterMode();
         float[] newPoly;
         switch (mode) {
             case CENTROID:
