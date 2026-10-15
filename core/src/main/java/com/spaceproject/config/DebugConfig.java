@@ -26,6 +26,8 @@ public class DebugConfig extends Config {
     public boolean invincible;
     public boolean reflectAsteroidColor;
     public boolean discoLaser;
+    public boolean sliceLaser;
+    public boolean singleSlice;
     
     @Override
     public void loadDefault() {
@@ -53,6 +55,8 @@ public class DebugConfig extends Config {
         infiniteFire = false;
         reflectAsteroidColor = false;
         discoLaser = false;
+        sliceLaser = false;
+        singleSlice = true;
     }
     
 }

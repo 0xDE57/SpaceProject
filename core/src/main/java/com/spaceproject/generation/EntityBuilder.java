@@ -91,6 +91,16 @@ public class EntityBuilder {
         CannonComponent cannon = makeCannon(vehicle.dimensions.width);
         shipEntity.add(cannon);
         vehicle.currentTool = VehicleComponent.Tool.cannon;
+        
+        boolean starterLaser = false;
+        if (starterLaser) {
+            LaserComponent laser = new LaserComponent();
+            laser.color = Color.GREEN.cpy();
+            laser.wavelength = 520;
+            laser.range = 500;
+            laser.damage = 1f;
+            vehicle.tools.put(VehicleComponent.Tool.laser.ordinal(), laser);
+        }
         /*
         int index = 0;
         switch(index) {
@@ -506,7 +516,7 @@ public class EntityBuilder {
         system with the z-axis pointing out of the plane.
         */
         Polygon polygon = new Polygon(vertices);
-        float area = Math.abs(GeometryUtils.polygonArea(polygon.getVertices(), 0, polygon.getVertices().length));
+        float area = GeometryUtils.polygonArea(polygon.getVertices(), 0, polygon.getVertices().length);
         AsteroidComponent asteroid = new AsteroidComponent();
         asteroid.polygon = polygon;
         asteroid.area = area;
@@ -541,6 +551,7 @@ public class EntityBuilder {
         penRhombusThin, penRhombusThicc
     }
 
+    //static final MyConvexHull convex = new MyConvexHull();
     static final ConvexHull convex = new ConvexHull();
     static final Vector2 center = new Vector2();
     public static Entity createAsteroid(long seed, float x, float y, float velX, float velY, float angularVel, float size) {
@@ -610,7 +621,7 @@ public class EntityBuilder {
         
         //generate hull poly from random points
         float[] hull = convex.computePolygon(points, false).toArray();
-        
+        //Gdx.app.log("new hull", java.util.Arrays.toString(hull) + " velX:" + velX + " velY:" + velY);
         //shift vertices to be centered around 0,0 relatively
         GeometryUtils.polygonCentroid(hull, 0, hull.length, center);
         for (int index = 0; index < hull.length; index += 2) {
