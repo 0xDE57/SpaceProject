@@ -1,7 +1,6 @@
 package com.spaceproject.generation;
 
 import com.badlogic.ashley.core.Entity;
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.ConvexHull;
@@ -17,7 +16,6 @@ import com.badlogic.gdx.utils.FloatArray;
 import com.spaceproject.SpaceProject;
 import com.spaceproject.components.*;
 import com.spaceproject.config.*;
-import com.spaceproject.math.MyConvexHull;
 import com.spaceproject.math.MyMath;
 import com.spaceproject.math.Physics;
 import com.spaceproject.screens.GameScreen;
