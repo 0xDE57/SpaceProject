@@ -450,7 +450,6 @@ public class AsteroidBeltSystem extends EntitySystem {
         float[] vertices = asteroid.polygon.getVertices();
         
         //todo: could add some variation in parameters
-        // could also make shatter mode a property of asteroid composition so different colors break different
         ShatterMode mode = randomShatterMode ? ShatterMode.random() : asteroid.composition.getShatterMode();
         float[] newPoly;
         switch (mode) {
@@ -495,7 +494,6 @@ public class AsteroidBeltSystem extends EntitySystem {
         */
         
         ShortArray triangleIndices = delaunay.computeTriangles(vertices, false);
-
         //create cells for each triangle
         for (int index = 0; index < triangleIndices.size; index += 3) {
             int p1 = triangleIndices.get(index) * 2;
@@ -518,10 +516,8 @@ public class AsteroidBeltSystem extends EntitySystem {
                 continue;
             }
             
-            //todo: discard shards / slivers?
-            //float quality = GeometryUtils.triangleQuality(hull[0], hull[1], hull[2], hull[3], hull[4], hull[5]);
             float childArea = GeometryUtils.triangleArea(hull[0], hull[1], hull[2], hull[3], hull[4], hull[5]);
-            if (childArea < minAsteroidSize * 0.5f /* || (quality < qualityThreshold)*/) {
+            if (childArea < 1) {
                 //if too small just drop a resource
                 GeometryUtils.triangleCentroid(
                     hull[0], hull[1],
@@ -533,6 +529,14 @@ public class AsteroidBeltSystem extends EntitySystem {
                 getEngine().addEntity(drop);
                 continue;
             }
+            /*
+            //todo: discard shards / slivers?
+            float quality = GeometryUtils.triangleQuality(hull[0], hull[1], hull[2], hull[3], hull[4], hull[5]);
+            if (quality < qualityThreshold) {
+                //if too thin, either destroy immediately
+                //perhaps a ratio between 
+                //sub shatter further? if children too small create drops
+            }*/
             
             //shift vertices to be centered
             GeometryUtils.triangleCentroid(
@@ -570,7 +574,7 @@ public class AsteroidBeltSystem extends EntitySystem {
             // eg: 50 damage / 3 children = 16.6
             //float distributedDamage = damage / triangleIndices/3; // * assuming no triangles are discarded!!!
             //childAsteroid.getComponent(HealthComponent.class).health -= damage;
-            //we could aslo pre sub shatter further depending on how much damage is done? since we already know the what the child
+            //we could also pre sub shatter further depending on how much damage is done? since we already know the what the child
             //bodies will be under the current simplified delaunay-based shatter.
         }
     }
