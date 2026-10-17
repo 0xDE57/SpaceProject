@@ -29,8 +29,9 @@ public class MultiGraph {
         return series;
     }
     
+    Color temp = new Color(0.1f, 0.1f, 0.1f, 1f);
     public void draw(ShapeRenderer shape, float x, float y) {
-        shape.setColor(new Color(0.1f, 0.1f, 0.1f, 1f));
+        shape.setColor(temp);
         shape.rect(x, y, width, height);
         
         for (GraphSeries series : seriesList) {
