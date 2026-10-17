@@ -14,15 +14,16 @@ public class PerformanceGraphSystem extends EntitySystem {
     private final ShapeRenderer shape;
     private final Matrix4 projectionMatrix;
     private final MultiGraph graph;
-    private final GraphSeries fpsSeries, entities;//, c, s;
+    private final GraphSeries fpsSeries, entities, memory;//, c, s;
     
     public PerformanceGraphSystem() {
         shape = GameScreen.shape;
         projectionMatrix = new Matrix4();
         
         graph = new MultiGraph(400, 150);
-        fpsSeries = graph.addSeries(1000, Color.GREEN);
-        entities = graph.addSeries(1000, Color.WHITE);
+        fpsSeries = graph.addSeries(1500, Color.GREEN);
+        entities = graph.addSeries(1500, Color.WHITE);
+        memory = graph.addSeries(1500, Color.PINK);
         //c = graph.addSeries(200, Color.LIGHT_GRAY);
         //s = graph.addSeries(200, Color.DARK_GRAY);
     }
@@ -35,6 +36,10 @@ public class PerformanceGraphSystem extends EntitySystem {
         shape.begin(ShapeRenderer.ShapeType.Line);
         fpsSeries.update(Gdx.graphics.getFramesPerSecond());
         entities.update(getEngine().getEntities().size());
+        Runtime runtime = Runtime.getRuntime();
+        long used = runtime.totalMemory() - runtime.freeMemory();
+        memory.update(used);
+        
         graph.draw(shape, Gdx.graphics.getWidth() - 50 - graph.getWidth(), Gdx.graphics.getHeight() - 50 - graph.getHeight());
         shape.end();
     }
