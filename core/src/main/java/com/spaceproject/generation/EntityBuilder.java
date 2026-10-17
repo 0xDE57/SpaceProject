@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.FloatArray;
 import com.spaceproject.SpaceProject;
 import com.spaceproject.components.*;
 import com.spaceproject.config.*;
+import com.spaceproject.math.MyConvexHull;
 import com.spaceproject.math.MyMath;
 import com.spaceproject.math.Physics;
 import com.spaceproject.screens.GameScreen;
@@ -551,8 +552,8 @@ public class EntityBuilder {
         penRhombusThin, penRhombusThicc
     }
 
-    //static final MyConvexHull convex = new MyConvexHull();
-    static final ConvexHull convex = new ConvexHull();
+    static final MyConvexHull convex = new MyConvexHull();
+    //static final ConvexHull convex = new ConvexHull();
     static final Vector2 center = new Vector2();
     public static Entity createAsteroid(long seed, float x, float y, float velX, float velY, float angularVel, float size) {
         int maxPoints = 7;//Box2D poly vert limit is 7: Assertion `3 <= count && count <= 8' failed.
@@ -630,7 +631,8 @@ public class EntityBuilder {
         }
 
         //todo: scale irregular bodies to desired size because current method is doesnt match
-        //GeometryUtils.ensureCCW(hull);
+        GeometryUtils.ensureCCW(hull);
+        //GeometryUtils.isCCW()
         //Polygon polygon = new Polygon(hull);
         //float area = Math.abs(GeometryUtils.polygonArea(polygon.getVertices(), 0, polygon.getVertices().length));
 

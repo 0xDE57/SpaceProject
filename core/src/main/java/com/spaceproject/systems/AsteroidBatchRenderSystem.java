@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -11,12 +12,12 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.math.*;
 import com.spaceproject.components.AsteroidComponent;
 import com.spaceproject.components.HealthComponent;
 import com.spaceproject.components.ItemComponent;
 import com.spaceproject.components.TransformComponent;
+import com.spaceproject.math.InsetPolygonCache;
 import com.spaceproject.screens.GameScreen;
 import com.spaceproject.utility.Mappers;
 import space.earlygrey.shapedrawer.JoinType;
@@ -24,15 +25,29 @@ import space.earlygrey.shapedrawer.ShapeDrawer;
 
 public class AsteroidBatchRenderSystem extends IteratingSystem {
     
+    boolean debugRevealAll = false;
+    
     final ShapeDrawer shapeDrawer;
     final Batch batch;
     final Texture texture;
+    final InsetPolygonCache polygonCache;
     final Color tempColor;
     final Color defaultOutline;
     
-    final float lineWidth = 0.25f;
+    float lineWidth = 0.18f;
+    float borderGrowMultiplier = 0.75f;
+    JoinType joinType = JoinType.POINTY;
     
-    boolean debugRevealAll = false;
+    boolean asteroidAutoLOD = true;
+    boolean fpsLimitedLOD = true;
+    
+    public enum PathMode {
+        CENTERED, //current default
+        INSET,
+        OUTSET
+    }
+    
+    PathMode mode = PathMode.INSET;
     
     public AsteroidBatchRenderSystem() {
         super(Family.all(AsteroidComponent.class, TransformComponent.class).get());
@@ -45,6 +60,7 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
         TextureRegion region = new TextureRegion(texture, 0, 0, 1, 1);
         batch = new SpriteBatch();
         shapeDrawer = new ShapeDrawer(batch, region);
+        polygonCache = new InsetPolygonCache(8);
         
         tempColor = new Color();
         defaultOutline = new Color(0.5f, 0.5f, 0.5f, 1);
@@ -64,6 +80,43 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
         batch.end();
         
         Gdx.gl.glDisable(GL20.GL_BLEND);
+        
+        if (GameScreen.isDebugMode) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
+                switch (joinType) {
+                    case NONE:
+                        joinType = JoinType.POINTY;
+                        break;
+                    case POINTY:
+                        joinType = JoinType.SMOOTH;
+                        break;
+                    case SMOOTH:
+                        joinType = JoinType.NONE;
+                        break;
+                }
+                Gdx.app.debug(getClass().getSimpleName(), "JoinType: " + joinType);
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.K)) {
+                switch (mode) {
+                    case CENTERED:
+                        mode = PathMode.INSET;
+                        break;
+                    case INSET:
+                        mode = PathMode.OUTSET;
+                        break;
+                    case OUTSET:
+                        mode = PathMode.CENTERED;
+                        break;
+                }
+                Gdx.app.debug(getClass().getSimpleName(), "Outline Mode: " + mode);
+            }
+            if (Gdx.input.isKeyPressed(Input.Keys.NUMPAD_ADD)) {
+                lineWidth += 2f * deltaTime;
+            }
+            if (Gdx.input.isKeyPressed(Input.Keys.NUMPAD_SUBTRACT)) {
+                lineWidth -= 2f * deltaTime;
+            }
+        }
     }
     
     @Override
@@ -76,7 +129,7 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
         polygon.setRotation(transform.rotation * MathUtils.radiansToDegrees);
         polygon.setPosition(transform.pos.x, transform.pos.y);
         
-        //set color based on fill type and health
+        //set color based on type and health
         HealthComponent health = Mappers.health.get(entity);
         float ratio = health.health / health.maxHealth;
         long timeSinceDmg = GameScreen.getGameTimeCurrent() - health.lastHitTime;
@@ -107,19 +160,64 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
         shapeDrawer.filledPolygon(polygon);
         
         //mesh outline
+        tempColor.set(defaultOutline);
+        float tempWidth = lineWidth;
+        if (timeSinceDmg < hitTime) {
+            float fade = (float) timeSinceDmg / hitTime;
+            tempColor.lerp(asteroid.color, 1 - fade);
+            //float rnd = MathUtils.random(-1f, 1f) * 0.5f * borderGrowMultiplier;
+            tempWidth += (tempWidth * borderGrowMultiplier) * (1 - fade);// + rnd;
+        }
         if (asteroid.revealed || debugRevealAll) {
             tempColor.set(asteroid.color);
-        } else {
-            tempColor.set(defaultOutline);
-            if (timeSinceDmg < hitTime) {
-                float fade = (float) timeSinceDmg / hitTime;
-                tempColor.lerp(asteroid.color, 1 - fade);
-            }
         }
         tempColor.a = 1;
         shapeDrawer.setColor(tempColor);
-        shapeDrawer.polygon(polygon, lineWidth, JoinType.NONE);
-        //shapeDrawer.path(polygon.getTransformedVertices(), lineWidth, JoinType.NONE, false);
+        
+        PathMode tempMode = mode;
+        JoinType tempjoin = joinType;
+        if (asteroidAutoLOD) {
+            //LOD - auto adjust rendering quality
+            //  JoinType: POINTY and SMOOTH are more expensive than NONE
+            //  PathMode: INSET and OUTSET are more expensive than CENTERED
+            //  1. reduce asteroid render cost when zoomed out far enough
+            //  2. reduce render cost when fps is detected to be below threshold
+            if (GameScreen.cam.zoom > 15f || fpsLimitedLOD) {
+                tempMode = PathMode.CENTERED;
+                tempjoin = JoinType.NONE;
+            }
+            int frames = Gdx.graphics.getFramesPerSecond();
+            if (fpsLimitedLOD) {
+                if (frames > 45) {
+                    fpsLimitedLOD = false;
+                    Gdx.app.debug(getClass().getSimpleName(), "Asteroid LOD restored due to frames: " + frames);
+                }
+            } else {
+                if (frames < 30) {
+                    fpsLimitedLOD = true;
+                    Gdx.app.debug(getClass().getSimpleName(), "Asteroid LOD dropped asteroid quality due to low frames: " + frames);
+                }
+            }
+        }
+        
+        
+        //NOTE: ConvexHull by default produces CCW.
+        // Does DelaunayTriangulator produces CW? Child triangles seem flipped?
+        // attempt to detect winding; isCCW now seem to work even when ensure... bug?
+        boolean ccw = polygon.getVertices().length > 6;//GeometryUtils.isCCW(vertices, 0 , vertices.length);
+        switch (tempMode) {
+            case CENTERED:
+                shapeDrawer.polygon(polygon, lineWidth, tempjoin);
+                break;
+            case INSET:
+                float[] innerPoly = polygonCache.insetPolygon(polygon.getTransformedVertices(), tempWidth * 0.5f, ccw);
+                shapeDrawer.polygon(innerPoly, 0, polygon.getVertices().length, tempWidth, tempjoin);
+                break;
+            case OUTSET:
+                float[] outerPoly = polygonCache.insetPolygon(polygon.getTransformedVertices(), tempWidth * 0.5f, !ccw);
+                shapeDrawer.polygon(outerPoly, 0, polygon.getVertices().length, tempWidth, tempjoin);
+                break;
+        }
     }
     
 }
