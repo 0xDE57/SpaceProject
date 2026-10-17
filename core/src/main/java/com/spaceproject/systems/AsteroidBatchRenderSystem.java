@@ -88,7 +88,8 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
         if (asteroid.composition == ItemComponent.Resource.GLASS) {
             tempColor.set(asteroid.color);
         } else {
-            tempColor.set(Color.BLACK).lerp(asteroid.revealed ? asteroid.color : defaultOutline, 1 - ratio);
+            //tempColor.set(Color.BLACK).lerp(asteroid.revealed ? asteroid.color : defaultOutline, 1 - ratio);
+            tempColor.set(Color.BLACK).lerp(asteroid.color, 1 - ratio);
         }
         hitTime = 500;
         long timeSinceHit = GameScreen.getGameTimeCurrent() - asteroid.lastShieldHit;
@@ -110,6 +111,10 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
             tempColor.set(asteroid.color);
         } else {
             tempColor.set(defaultOutline);
+            if (timeSinceDmg < hitTime) {
+                float fade = (float) timeSinceDmg / hitTime;
+                tempColor.lerp(asteroid.color, 1 - fade);
+            }
         }
         tempColor.a = 1;
         shapeDrawer.setColor(tempColor);
