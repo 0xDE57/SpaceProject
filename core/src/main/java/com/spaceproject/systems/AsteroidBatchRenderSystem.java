@@ -25,6 +25,8 @@ import space.earlygrey.shapedrawer.ShapeDrawer;
 
 public class AsteroidBatchRenderSystem extends IteratingSystem {
     
+    boolean debugRevealAll = false;
+    
     final ShapeDrawer shapeDrawer;
     final Batch batch;
     final Texture texture;
@@ -35,7 +37,9 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
     float lineWidth = 0.18f;
     float borderGrowMultiplier = 0.75f;
     JoinType joinType = JoinType.POINTY;
-    boolean debugRevealAll = false;
+    
+    boolean asteroidAutoLOD = true;
+    boolean fpsLimitedLOD = true;
     
     public enum PathMode {
         CENTERED, //current default
@@ -106,13 +110,12 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
                 }
                 Gdx.app.debug(getClass().getSimpleName(), "Outline Mode: " + mode);
             }
-        }
-        
-        if (Gdx.input.isKeyPressed(Input.Keys.NUMPAD_ADD)) {
-            lineWidth += 2f * deltaTime;
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.NUMPAD_SUBTRACT)) {
-            lineWidth -= 2f * deltaTime;
+            if (Gdx.input.isKeyPressed(Input.Keys.NUMPAD_ADD)) {
+                lineWidth += 2f * deltaTime;
+            }
+            if (Gdx.input.isKeyPressed(Input.Keys.NUMPAD_SUBTRACT)) {
+                lineWidth -= 2f * deltaTime;
+            }
         }
     }
     
@@ -170,37 +173,51 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
         }
         tempColor.a = 1;
         shapeDrawer.setColor(tempColor);
-        //shapeDrawer.polygon(polygon, lineWidth, joinType);
-        //shapeDrawer.setColor(Color.PINK);
         
-        // detect winding; GeometryUtils.isCCW expects float[] x,y pairs
+        PathMode tempMode = mode;
+        JoinType tempjoin = joinType;
+        if (asteroidAutoLOD) {
+            //LOD - auto adjust rendering quality
+            //  JoinType: POINTY and SMOOTH are more expensive than NONE
+            //  PathMode: INSET and OUTSET are more expensive than CENTERED
+            //  1. reduce asteroid render cost when zoomed out far enough
+            //  2. reduce render cost when fps is detected to be below threshold
+            if (GameScreen.cam.zoom > 15f || fpsLimitedLOD) {
+                tempMode = PathMode.CENTERED;
+                tempjoin = JoinType.NONE;
+            }
+            int frames = Gdx.graphics.getFramesPerSecond();
+            if (fpsLimitedLOD) {
+                if (frames > 45) {
+                    fpsLimitedLOD = false;
+                    Gdx.app.debug(getClass().getSimpleName(), "Asteroid LOD restored due to frames: " + frames);
+                }
+            } else {
+                if (frames < 30) {
+                    fpsLimitedLOD = true;
+                    Gdx.app.debug(getClass().getSimpleName(), "Asteroid LOD dropped asteroid quality due to low frames: " + frames);
+                }
+            }
+        }
+        
+        
+        //NOTE: ConvexHull by default produces CCW.
+        // Does DelaunayTriangulator produces CW? Child triangles seem flipped?
+        // attempt to detect winding; isCCW now seem to work even when ensure... bug?
         boolean ccw = polygon.getVertices().length > 6;//GeometryUtils.isCCW(vertices, 0 , vertices.length);
-        switch (mode) {
+        switch (tempMode) {
             case CENTERED:
-                shapeDrawer.polygon(polygon, lineWidth, joinType);
+                shapeDrawer.polygon(polygon, lineWidth, tempjoin);
                 break;
             case INSET:
                 float[] innerPoly = polygonCache.insetPolygon(polygon.getTransformedVertices(), tempWidth * 0.5f, ccw);
-                shapeDrawer.polygon(innerPoly, 0, polygon.getVertices().length, tempWidth, joinType);
+                shapeDrawer.polygon(innerPoly, 0, polygon.getVertices().length, tempWidth, tempjoin);
                 break;
             case OUTSET:
                 float[] outerPoly = polygonCache.insetPolygon(polygon.getTransformedVertices(), tempWidth * 0.5f, !ccw);
-                shapeDrawer.polygon(outerPoly, 0, polygon.getVertices().length, tempWidth, joinType);
+                shapeDrawer.polygon(outerPoly, 0, polygon.getVertices().length, tempWidth, tempjoin);
                 break;
         }
-        
-        /*
-        shapeDrawer.setColor(tempColor);
-        //shapeDrawer.setColor(1, 1, 1, 1);
-        shapeDrawer.polygon(insetPolygon(polygon.getTransformedVertices(), lineWidth, ccw), lineWidth*2f, joinType);
-        //shapeDrawer.setColor(1, 1, 1, 1);
-        shapeDrawer.polygon(insetPolygon(polygon.getTransformedVertices(), lineWidth, !ccw), lineWidth*2f, joinType);
-        shapeDrawer.setColor(1, 1, 1, 1);
-        //shapeDrawer.setColor(tempColor);
-        shapeDrawer.polygon(polygon, lineWidth, joinType);
-        */
-        
-        //shapeDrawer.path(polygon.getTransformedVertices(), lineWidth, JoinType.NONE, false);
     }
     
 }
