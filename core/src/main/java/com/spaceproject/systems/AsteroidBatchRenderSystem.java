@@ -77,33 +77,35 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
         
         Gdx.gl.glDisable(GL20.GL_BLEND);
         
-        if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
-            switch (joinType) {
-                case NONE:
-                    joinType = JoinType.POINTY;
-                    break;
-                case POINTY:
-                    joinType = JoinType.SMOOTH;
-                    break;
-                case SMOOTH:
-                    joinType = JoinType.NONE;
-                    break;
+        if (GameScreen.isDebugMode) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
+                switch (joinType) {
+                    case NONE:
+                        joinType = JoinType.POINTY;
+                        break;
+                    case POINTY:
+                        joinType = JoinType.SMOOTH;
+                        break;
+                    case SMOOTH:
+                        joinType = JoinType.NONE;
+                        break;
+                }
+                Gdx.app.debug(getClass().getSimpleName(), "JoinType: " + joinType);
             }
-            Gdx.app.debug(getClass().getSimpleName(), "JoinType: " + joinType);
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.K)) {
-            switch (mode) {
-                case CENTERED:
-                    mode = PathMode.INSET;
-                    break;
-                case INSET:
-                    mode = PathMode.OUTSET;
-                    break;
-                case OUTSET:
-                    mode = PathMode.CENTERED;
-                    break;
+            if (Gdx.input.isKeyJustPressed(Input.Keys.K)) {
+                switch (mode) {
+                    case CENTERED:
+                        mode = PathMode.INSET;
+                        break;
+                    case INSET:
+                        mode = PathMode.OUTSET;
+                        break;
+                    case OUTSET:
+                        mode = PathMode.CENTERED;
+                        break;
+                }
+                Gdx.app.debug(getClass().getSimpleName(), "Outline Mode: " + mode);
             }
-            Gdx.app.debug(getClass().getSimpleName(), "Outline Mode: " + mode);
         }
         
         if (Gdx.input.isKeyPressed(Input.Keys.NUMPAD_ADD)) {

@@ -10,10 +10,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.*;
 import com.spaceproject.SpaceProject;
-import com.spaceproject.components.AsteroidBeltComponent;
-import com.spaceproject.components.AsteroidComponent;
-import com.spaceproject.components.PhysicsComponent;
-import com.spaceproject.components.TransformComponent;
+import com.spaceproject.components.*;
 import com.spaceproject.config.DebugConfig;
 import com.spaceproject.generation.EntityBuilder;
 import com.spaceproject.math.MyMath;
@@ -24,6 +21,7 @@ import com.spaceproject.utility.DebugUtil;
 import com.spaceproject.utility.Mappers;
 import com.spaceproject.utility.SimpleTimer;
 
+import java.security.Key;
 import java.util.List;
 
 
@@ -120,6 +118,10 @@ public class AsteroidBeltSystem extends EntitySystem {
                     spawnAsteroid(unproject.x, unproject.y, 0, 0);
                 }
             }
+        }
+        //debug clear all asteroids
+        if (GameScreen.isDebugMode && Gdx.input.isKeyPressed(Input.Keys.MINUS)) {
+            asteroids.forEach(entity -> entity.add(new RemoveComponent()));
         }
     }
 
