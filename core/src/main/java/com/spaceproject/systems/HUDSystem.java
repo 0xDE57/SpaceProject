@@ -406,16 +406,23 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
         int messageHeight = (Gdx.graphics.getHeight() - (Gdx.graphics.getHeight() / 3)) - offset;
         float height = 40 + offset;
         shape.rect(0, messageHeight, Gdx.graphics.getWidth(), height, Color.CLEAR, Color.CLEAR, Color.DARK_GRAY, Color.DARK_GRAY);
+        //shape.rect(0, messageHeight, Gdx.graphics.getWidth(), height, Color.BLACK, Color.BLACK, Color.CLEAR, Color.CLEAR);
         Color color = messageState == SpecialState.destroyed ? Color.RED : uiCFG.uiBaseColor;
+        if (messageState == SpecialState.destroyed) {
+            shape.rect(0, messageHeight, Gdx.graphics.getWidth(), height, Color.FIREBRICK, Color.FIREBRICK, Color.CLEAR, Color.CLEAR);
+        } else {
+            //shape.rect(0, messageHeight, Gdx.graphics.getWidth(), height, color, color, Color.CLEAR, Color.CLEAR);
+        }
         shape.setColor(color);
         shape.rectLine(0, messageHeight + height, Gdx.graphics.getWidth(), messageHeight + height, 3);
-        shape.rectLine(0, messageHeight, Gdx.graphics.getWidth(), messageHeight, 1);
+        shape.rectLine(0, messageHeight, Gdx.graphics.getWidth(), messageHeight, 3);
 
         int timerHeight = (Gdx.graphics.getHeight() - (Gdx.graphics.getHeight() / 3) - 6);
         float halfWidth = Gdx.graphics.getWidth() * 0.5f;
 
         //draw respawn line
         if (messageState == SpecialState.destroyed) {
+            //shape.rect(0, messageHeight, Gdx.graphics.getWidth(), messageHeight-(height*2)-Gdx.graphics.getHeight(), Color.DARK_GRAY, Color.DARK_GRAY, Color.CLEAR, Color.CLEAR);
             ImmutableArray<Entity> respawnEntities = getEngine().getEntitiesFor(Family.all(RespawnComponent.class).get());
             if (respawnEntities.size() > 0) {
                 RespawnComponent respawn = Mappers.respawn.get(respawnEntities.first());
