@@ -218,6 +218,23 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
                 shapeDrawer.polygon(outerPoly, 0, polygon.getVertices().length, tempWidth, tempjoin);
                 break;
         }
+        
+        /*
+        //hit ring animation test...
+        if (asteroidAutoLOD && !fpsLimitedLOD) {
+            if (GameScreen.cam.zoom < 10f && tempMode == PathMode.INSET) {
+                if (timeSinceDmg < hitTime) {
+                    float fade = (float) timeSinceDmg / hitTime;
+                    float outlineWidth = lineWidth * fade;
+                    float[] outerPoly = polygonCache.insetPolygon(polygon.getTransformedVertices(), outlineWidth * 0.5f, !ccw);
+                    
+                    tempColor.a = fade;
+                    shapeDrawer.setColor(tempColor);
+                    shapeDrawer.polygon(outerPoly, 0, polygon.getVertices().length, outlineWidth, tempjoin);
+               }
+            }
+        }*/
+        
     }
     
 }
