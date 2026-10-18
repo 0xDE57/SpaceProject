@@ -70,6 +70,8 @@ public class DebugSystem extends IteratingSystem implements Disposable {
     private final Texture texCompSeparator = TextureGenerator.createTile(new Color(0.1f, 0.63f, 0.88f, 1f));
     private final GlyphLayout versionLayout;
     
+    private final StringBuilder sb = new StringBuilder();
+    
     //entity storage
     private final Array<Entity> objects;
     
@@ -198,7 +200,9 @@ public class DebugSystem extends IteratingSystem implements Disposable {
         int fps = Gdx.graphics.getFramesPerSecond();
         Color fpsColor = fps >= 120 ? Color.SKY : fps >= 60 ? Color.GREEN : fps >= 45 ? Color.WHITE : fps >= 30 ? Color.YELLOW : Color.RED;
         fontLarge.setColor(fpsColor);
-        fontLarge.draw(batch, Integer.toString(fps), x, y);
+        sb.setLength(0);
+        sb.append(fps);
+        fontLarge.draw(batch, sb, x, y);
     }
     
     private void drawDiagnosticInfo(int x, int y) {

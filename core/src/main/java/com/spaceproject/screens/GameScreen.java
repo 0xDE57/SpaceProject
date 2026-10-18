@@ -5,6 +5,7 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.controllers.Controllers;
 import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -23,10 +24,7 @@ import com.spaceproject.components.PhysicsComponent;
 import com.spaceproject.components.PlanetComponent;
 import com.spaceproject.components.RemoveComponent;
 import com.spaceproject.components.ScreenTransitionComponent;
-import com.spaceproject.config.EngineConfig;
-import com.spaceproject.config.SysCFG;
-import com.spaceproject.config.SystemsConfig;
-import com.spaceproject.config.WorldConfig;
+import com.spaceproject.config.*;
 import com.spaceproject.generation.FontLoader;
 import com.spaceproject.generation.Galaxy;
 import com.spaceproject.math.MyMath;
@@ -64,6 +62,7 @@ public class GameScreen extends MyScreenAdapter {
     
     public static boolean isDebugMode = true;
     private static final StringBuilder profilerStringBuilder = new StringBuilder();
+    private static final DebugConfig debugCFG = SpaceProject.configManager.getConfig(DebugConfig.class);
     
     public GameScreen() {
         //LOG_NONE:  mutes all logging.
@@ -258,7 +257,8 @@ public class GameScreen extends MyScreenAdapter {
         stage.act(Math.min(delta, 1 / 30f));
         stage.draw();
 
-        pollGLProfiler();
+        if (debugCFG.drawDiagnosticInfo)
+            pollGLProfiler(); //only poll while DebugSystem is rendering
     }
     
     private void pollGLProfiler() {

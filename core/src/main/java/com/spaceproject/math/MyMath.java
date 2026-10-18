@@ -196,6 +196,16 @@ public abstract class MyMath {
         int scale = (int) Math.pow(10, precision);
         return (double) Math.round(value * scale) / scale;
     }
+    
+    /**
+     * Round for strings, no allocation.
+     */
+    public static void roundOneDecimal(StringBuilder sb, float value) { 
+        int scaled = Math.round(value * 10f); // scale to 1 decimal, rounded
+        int whole = scaled / 10;
+        int frac = Math.abs(scaled % 10);
+        sb.append(whole).append('.').append(frac); 
+    }
     //endregion
 
     static public boolean isEqualDouble(double a, double b, double tolerance) {

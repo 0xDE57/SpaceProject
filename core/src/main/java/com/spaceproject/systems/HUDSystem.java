@@ -107,6 +107,7 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
     private final GlyphLayout layout;
     private final Vector3 tempProj = new Vector3();
     private final Color cacheColor = new Color();
+    private final StringBuilder sb = new StringBuilder();
 
     //entity storage
     private ImmutableArray<Entity> mapableEntities;
@@ -307,7 +308,7 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
 
             if (focusedDist > 0) {
                 inventoryFont.setColor(1, 1, 1, 1);
-                layout.setText(inventoryFont, " " + (int) focusedDist);
+                layout.setText(inventoryFont, " " + (int) focusedDist);//todo: sb
                 inventoryFont.draw(batch, layout, focusedPos.x, focusedPos.y + 1);
             }
 
@@ -553,6 +554,7 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
                     drawHint("[" + (controllerHasFocus ? "B" : key).toUpperCase() + "] close shop");
                 }
                 String port = Mappers.docked.get(player).dockID;
+                //todo: string builder
                 layout.setText(font, "[ DOCKED: port " + port + " ]");
                 break;
             case landing:
@@ -595,7 +597,7 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
                 String key = Input.Keys.toString(SpaceProject.configManager.getConfig(KeyConfig.class).interact);
                 String input = (getEngine().getSystem(DesktopInputSystem.class).getControllerHasFocus() ? "D-Pad Down" : key).toUpperCase();
                 if (GameScreen.inSpace()) {
-                    drawHint("press [" + input + "] to land");
+                    drawHint("press [" + input + "] to land"); //todo: string builder
                 } else {
                     if (Mappers.vehicle.get(player) != null) {
                         drawHint("press [" + input + "] to take off");
@@ -632,6 +634,7 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
         float height = layout.height * 1.6f;
         float rightEdge = Gdx.graphics.getWidth() - leftEdge;
         
+        //todo: string memory leak. replace string with string builder
         //drawStat(String.format("%-10s %s", MyMath.formatDuration(stats.timeAlive), "time alive", leftEdge, messageHeight - height * h++, rightEdge, (h % 2 == 0) ? colorA : colorB);
         
         drawStat(stats.kills + "", "kills", leftEdge, messageHeight - height * h++, rightEdge, (h % 2 == 0) ? colorA : colorB);
@@ -912,7 +915,9 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
         HyperDriveComponent hyper = Mappers.hyper.get(entity);
         if (hyper != null && hyper.state == HyperDriveComponent.State.on) {
             cacheColor.set(Color.GOLD).lerp(Color.CYAN, 1 + (float) Math.sin(statusAnim));
-            layout.setText(inventoryFont, "[ HYPER-DRIVE ]", cacheColor, 0, Align.center, false);
+            sb.setLength(0);
+            sb.append("[ HYPER-DRIVE ]");
+            layout.setText(inventoryFont, sb, cacheColor, 0, Align.center, false);
             inventoryFont.draw(batch, layout, barX + layout.width - 37, healthBarY + barHeight + layout.height - 1);
             return;
         }
@@ -930,7 +935,12 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
             } else {
                 tempColor = Color.WHITE;
             }
-            layout.setText(inventoryFont, "" + MyMath.round(physics.body.getLinearVelocity().len(), 1), tempColor, 0, Align.center, false);
+            sb.setLength(0);
+            
+            //sb.append(MyMath.round(physics.body.getLinearVelocity().len(), 1));
+            MyMath.roundOneDecimal(sb, physics.body.getLinearVelocity().len());
+            //sb.append((int)physics.body.getLinearVelocity().len());
+            layout.setText(inventoryFont, sb, tempColor, 0, Align.center, false);
             inventoryFont.draw(batch, layout, barX + barWidth + radius + 10, healthBarY - 2);
         }
         //draw HP
@@ -948,14 +958,19 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
                 if (getEngine().getSystem(DesktopInputSystem.class).getControllerHasFocus()) {
                     input = "LT";
                 }
-                layout.setText(inventoryFont, "[" + input + "]", Color.WHITE, 0, Align.right, false);
+                sb.setLength(0);
+                sb.append("[").append(input).append("]");
+                layout.setText(inventoryFont, sb, Color.WHITE, 0, Align.right, false);
                 inventoryFont.draw(batch, layout, controlsX, healthBarY + layout.height);
                 if (shield.state == ShieldComponent.State.on) {
                     color = Color.BLUE;
                 }
             }
-            //inventoryFont.setColor(color);
-            layout.setText(inventoryFont, " " + MyMath.round(health.health, 1), color, 0, Align.center, false);
+            sb.setLength(0);
+            //sb.append(MyMath.round(health.health, 1));
+            //MyMath.roundOneDecimal(sb, health.health);
+            sb.append((int)health.health);
+            layout.setText(inventoryFont, sb, color, 0, Align.center, false);
             inventoryFont.draw(batch, layout, barX + barWidth * 0.5f, healthBarY + layout.height - 2);
         }
 
@@ -963,13 +978,14 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
         if (vehicleComponent != null && !vehicleComponent.tools.isEmpty()) {
             inventoryFont.setColor(Color.WHITE);
             String key = Input.Keys.toString(SpaceProject.configManager.getConfig(KeyConfig.class).switchWeapon);
-            String input = getEngine().getSystem(DesktopInputSystem.class).getControllerHasFocus() ? "[D-Pad Right]" : "[" + key + "]";
-            String toolText = vehicleComponent.currentTool.toString();
+            String input = getEngine().getSystem(DesktopInputSystem.class).getControllerHasFocus() ? "D-Pad Right" : key;
+            sb.setLength(0);
+            sb.append(vehicleComponent.currentTool);
             if (vehicleComponent.currentTool == VehicleComponent.Tool.tractor) {
-                toolText += ":" + Mappers.tractor.get(entity).mode.toString();
+                sb.append(":").append(Mappers.tractor.get(entity).mode.toString());
             }
-            toolText += " | " + input + " cycle";
-            layout.setText(inventoryFont, toolText, Color.WHITE, 0, Align.right, false);
+            sb.append(" | [").append(input).append("] cycle");
+            layout.setText(inventoryFont, sb, Color.WHITE, 0, Align.right, false);
             inventoryFont.draw(batch, layout, controlsX, healthBarY - barHeight + layout.height - 3);
         }
     }
@@ -985,28 +1001,38 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
         if (GameScreen.isPaused() || messageState == SpecialState.docked) {
             ratio = 0f; //force render if pause or docked
         }
+        //Gdx.app.debug("", ratio + "");
+        
         inventoryFont.setColor(1, 1, 1, 1 - ratio);
-        inventoryFont.draw(batch, cargo.credits + " credits", inventoryX, inventoryY);
+        sb.setLength(0);
+        sb.append(cargo.credits).append(" credits");
+        inventoryFont.draw(batch, sb, inventoryX, inventoryY);
+        
         int offsetY = 1;
         int total = 0;
-        for (ItemComponent.Resource resource : ItemComponent.Resource.values()) {
+        for (ItemComponent.Resource resource : ItemComponent.Resource.VALUES) {
             int id = resource.getId();
             if (cargo.inventory.containsKey(id)) {
                 int quantity = cargo.inventory.get(id);
                 total += quantity;
+                
+                if (ratio > 1) continue;
                 Color color = resource.getColor();
                 inventoryFont.setColor(color.r, color.g, color.b, 1 - ratio);
-                layout.setText(inventoryFont, quantity + " " + resource.name().toLowerCase());
+                sb.setLength(0);
+                sb.append(quantity).append(' ').append(resource.name().toLowerCase());
+                layout.setText(inventoryFont, sb);
                 inventoryFont.draw(batch, layout, inventoryX, inventoryY + (layout.height * 1.5f * offsetY++));
             }
         }
-        //if (total == 0) return; hide if empty. maybe fade away instead?
 
         //draw total
         int barWidth = uiCFG.playerHPBarWidth;
         int barX = Gdx.graphics.getWidth() / 2 - barWidth / 2;
         int healthBarY = uiCFG.playerHPBarY;
-        layout.setText(inventoryFont, total + "", Color.WHITE, 0, Align.center, false);
+        sb.setLength(0);
+        sb.append(total);
+        layout.setText(inventoryFont, sb, Color.WHITE, 0, Align.center, false);
         inventoryFont.draw(batch, layout, barX - radius - 10, healthBarY + 3);
     }
     //endregion
@@ -1024,7 +1050,9 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
             }
             cacheColor.set(1, 0, 0, 1).lerp(Color.CLEAR, (float) (GameScreen.getGameTimeCurrent() - text.timestamp) / damageTime);
             inventoryFont.setColor(cacheColor);
-            inventoryFont.draw(batch, "" + (int) text.damage, x, y);
+            sb.setLength(0);
+            sb.append((int)text.damage);
+            inventoryFont.draw(batch, sb, x, y);
 
             if (text.timestamp < GameScreen.getGameTimeCurrent() - damageTime) {
                 iterator.remove();

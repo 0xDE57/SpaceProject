@@ -134,7 +134,7 @@ public class ItemComponent implements Component {
             throw new IllegalArgumentException("No enum constant with id " + id);
         }
 
-        final static Resource[] VALUES = Resource.values();
+        public final static Resource[] VALUES = Resource.values();
         
         public static Resource random() {
             return VALUES[MathUtils.random(VALUES.length - 1)];
