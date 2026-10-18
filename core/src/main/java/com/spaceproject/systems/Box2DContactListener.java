@@ -363,7 +363,10 @@ public class Box2DContactListener implements ContactListener {
             }
             //todo: break shield if impact is hard enough
             //int shieldBreakThreshold = 500;
-            //if (impulse > shieldBreakThreshold) { }
+            //if (impulse > shieldBreakThreshold) { 
+            // do damage to other entity, scaled to impulse
+            // break shield effect animation
+            // }
             if (impulse > 1) {
                 sound.shieldImpact(impulse / vehicleDamageThreshold * 2);
                 Gdx.app.debug(getClass().getSimpleName(),"shield protect from: " + relativeDamage);

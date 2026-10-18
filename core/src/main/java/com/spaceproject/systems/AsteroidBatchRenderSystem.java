@@ -13,6 +13,7 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.*;
+import com.badlogic.gdx.utils.ShortArray;
 import com.spaceproject.components.AsteroidComponent;
 import com.spaceproject.components.HealthComponent;
 import com.spaceproject.components.ItemComponent;
@@ -203,7 +204,7 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
         
         //NOTE: ConvexHull by default produces CCW.
         // Does DelaunayTriangulator produces CW? Child triangles seem flipped?
-        // attempt to detect winding; isCCW now seem to work even when ensure... bug?
+        // attempt to detect winding; isCCW not seem to work even when ensure... bug?
         boolean ccw = polygon.getVertices().length > 6;//GeometryUtils.isCCW(vertices, 0 , vertices.length);
         switch (tempMode) {
             case CENTERED:
@@ -218,6 +219,12 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
                 shapeDrawer.polygon(outerPoly, 0, polygon.getVertices().length, tempWidth, tempjoin);
                 break;
         }
+        
+        /*
+        EarClippingTriangulator ear = new EarClippingTriangulator();
+        ShortArray arrRes = ear.computeTriangles(polygon.getTransformedVertices());
+        shapeDrawer.setColor(1, 1, 1, 1);
+        shapeDrawer.triangles(polygon.getTransformedVertices(), arrRes.items, 0, 0);*/
         
         /*
         //hit ring animation test...
