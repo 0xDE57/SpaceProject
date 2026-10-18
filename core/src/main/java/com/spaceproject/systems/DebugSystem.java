@@ -24,6 +24,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
+import com.badlogic.gdx.utils.IntArray;
 import com.spaceproject.SpaceProject;
 import com.spaceproject.components.AsteroidBeltComponent;
 import com.spaceproject.components.OrbitComponent;
@@ -261,8 +262,93 @@ public class DebugSystem extends IteratingSystem implements Disposable {
         fontLarge.draw(batch, versionLayout, Gdx.graphics.getWidth() - versionLayout.width -10, lineHeight + 10);
     }
     
+    private final IntArray compStartLines = new IntArray(16);
+    private final IntArray compLineCounts = new IntArray(16);
     /** Draw all Entity components and fields */
     private void drawComponentList() {
+        // NOTE: this is a very heavy method
+        float fontHeight = fontSmall.getLineHeight();
+        int backWidth = 400; // width of background
+        
+        fontSmall.setColor(1, 1, 1, 1);
+        
+        for (Entity entity : objects) {
+            // get entity position and list of components
+            TransformComponent t = Mappers.transform.get(entity);
+            tempProjVector.set(t.pos, 0);
+            Vector3 screenPos = cam.project(tempProjVector); // cam.project mutates tempProjVector and returns it
+            //todo: if not on screen, don't draw
+            
+            ImmutableArray<Component> components = entity.getComponents();
+            
+            // build one multi-line string for this entity
+            sb.setLength(0);
+            compStartLines.clear();
+            compLineCounts.clear();
+            int totalLines = 0;
+            
+            for (Component c : components) {
+                // record where this component starts (line index)
+                compStartLines.add(totalLines);
+                
+                String compName = c.getClass().getSimpleName();
+                // component title line
+                sb.append('[').append(compName).append(']').append('\n');
+                int linesForThisComp = 1; // the component name
+                
+                // (getFields allocates a new Field[] each call)
+                Field[] fields = c.getClass().getFields();
+                for (Field f : fields) {
+                    sb.append("    ").append(f.getName()).append(' ');
+                    Object val;
+                    try {
+                        val = f.get(c);
+                    } catch (Throwable ex) {
+                        // don't allocate stack traces or strings here; just append a short token
+                        val = "???";
+                        Gdx.app.debug(getClass().getSimpleName(), "Failed to get: " + f.getName(), ex);
+                    }
+                    if (val != null) {
+                        sb.append(val);
+                    } else {
+                        sb.append("null");
+                    }
+                    sb.append('\n');
+                    linesForThisComp++;
+                }
+                
+                compLineCounts.add(linesForThisComp);
+                totalLines += linesForThisComp;
+            }
+            
+            if (totalLines == 0) continue; // nothing to draw
+            
+            // vertical offset so the block is centered around the entity like before
+            float yOffset = fontHeight * totalLines / 2f;
+            
+            // draw a single background block sized to number of lines (uses the same tex as before)
+            // note: original code drew a per-line background using -fontHeight as height; we combine those
+            batch.draw(texCompBack, screenPos.x, screenPos.y + yOffset, backWidth, -fontHeight * totalLines);
+            
+            // draw separators for each component (one per component, at the bottom of that component)
+            for (int i = 0; i < compStartLines.size; i++) {
+                int startLine = compStartLines.get(i);
+                int cnt = compLineCounts.get(i);
+                // separator sits after the component lines
+                float sepY = screenPos.y - (fontHeight * (startLine + cnt)) + yOffset;
+                batch.draw(texCompSeparator, screenPos.x, sepY, backWidth, 1);
+            }
+            
+            // draw the full multi-line text once
+            // keep the same indentation as your original per-field text (you used +130 for text x)
+            float textX = screenPos.x;
+            float textY = screenPos.y + yOffset; // first line baseline; subsequent lines rendered by '\n'
+            fontSmall.draw(batch, sb, textX, textY);
+        }
+    }
+    
+    /** Draw all Entity components and fields */
+    private void drawComponentList2() {
         // todo: this is a very heavy method, consider frustrum culling: if object is offscreen do not render!
         float fontHeight = fontSmall.getLineHeight();
         int backWidth = 400;//width of background
@@ -272,12 +358,10 @@ public class DebugSystem extends IteratingSystem implements Disposable {
         for (Entity entity : objects) {
             //get entities position and list of components
             TransformComponent t = Mappers.transform.get(entity);
-            ImmutableArray<Component> components = entity.getComponents();
-            
-            //use Vector3.cpy() to project only the position and avoid modifying projection matrix for all coordinates
-            tempProjVector.set(t.pos.cpy(), 0);
+            tempProjVector.set(t.pos, 0);
             Vector3 screenPos = cam.project(tempProjVector);
             
+            ImmutableArray<Component> components = entity.getComponents();
             //calculate spacing and offset for rendering
             int fields = 0;
             for (Component c : components) {
@@ -326,14 +410,12 @@ public class DebugSystem extends IteratingSystem implements Disposable {
         fontSmall.setColor(1, 1, 1, 1);
         for (Entity entity : objects) {
             TransformComponent t = Mappers.transform.get(entity);
-            
-            //String vel = " ~ " + MyMath.round(t.velocity.len(), 1);
-            String info = MyMath.round(t.pos.x, 1) + "," + MyMath.round(t.pos.y, 1);
-            
-            tempProjVector.set(t.pos.cpy(), 0);
+            tempProjVector.set(t.pos, 0);
             Vector3 screenPos = cam.project(tempProjVector);
-            fontSmall.draw(batch, Integer.toHexString(entity.hashCode()), screenPos.x, screenPos.y);
-            fontSmall.draw(batch, info, screenPos.x, screenPos.y-10);
+            sb.setLength(0);
+            sb.append(Integer.toHexString(entity.hashCode())).append("\n");
+            sb.append(MyMath.round(t.pos.x, 1)).append(",").append(MyMath.round(t.pos.y, 1));
+            fontSmall.draw(batch, sb, screenPos.x, screenPos.y);
         }
     }
     
