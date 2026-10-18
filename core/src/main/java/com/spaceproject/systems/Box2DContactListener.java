@@ -411,12 +411,13 @@ public class Box2DContactListener implements ContactListener {
 
     public static HealthComponent damage(Engine engine, Entity entity, Entity source, float damage, Vector2 location, Body damagedBody) {
         if (damage <= 0) return null;
+        //Gdx.app.debug("", "damage: " + damage + " - from: " + DebugUtil.objString(source) + " to: " + DebugUtil.objString(entity));
         
         HealthComponent health = Mappers.health.get(entity);
         if (health == null) return null;
         
         if (health.health <= 0) {
-            if (entity.getComponent(RemoveComponent.class) == null) {
+            if (Mappers.remove.get(entity) == null) {
                 Gdx.app.error(Box2DContactListener.class.getSimpleName(), "damage to [" + DebugUtil.objString(entity) + "] ignored. ENTITY NOT MARKED FOR REMOVAL!");
             }
             return null;
@@ -491,8 +492,9 @@ public class Box2DContactListener implements ContactListener {
         AsteroidComponent asteroid = Mappers.asteroid.get(entity);
         if (asteroid != null) {
             //NOTE: cannot CreateBody() during physics step
-            engine.getSystem(AsteroidBeltSystem.class).destroyAsteroid(asteroid, damagedBody.getPosition().cpy(), damagedBody.getLinearVelocity().cpy(), damagedBody.getAngle(), damagedBody.getAngularVelocity());
-            engine.getSystem(SoundSystem.class).asteroidShatter(asteroid.composition);
+            engine.getSystem(AsteroidBeltSystem.class).destroyAsteroid(asteroid,
+                damagedBody.getPosition().cpy(), damagedBody.getLinearVelocity().cpy(),
+                damagedBody.getAngle(), damagedBody.getAngularVelocity());
             return;
         }
 
@@ -519,6 +521,15 @@ public class Box2DContactListener implements ContactListener {
                     EntityBuilder.dropResource(damagedBody.getPosition(), damagedBody.getLinearVelocity(), color);
                 }
             }*/
+            
+            //shatter asteroid that was hit
+            AsteroidComponent sourceAsteroid = Mappers.asteroid.get(source);
+            if (sourceAsteroid != null /*&& Mappers.remove.get(source) == null*/) {
+                PhysicsComponent physics = Mappers.physics.get(source);
+                damage(engine, source, entity, 10000, damagedBody.getPosition(), physics.body);
+            }
+            //todo: apply impulsed blast to nearby asteroids, based on distance to exprosion
+            
             Gdx.app.log(Box2DContactListener.class.getSimpleName(), "[" + DebugUtil.objString(entity) + "] destroyed by: [" + DebugUtil.objString(source) + "]");
             engine.getSystem(SoundSystem.class).shipExplode();
         }

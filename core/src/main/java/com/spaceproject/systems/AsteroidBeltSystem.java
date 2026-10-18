@@ -210,6 +210,8 @@ public class AsteroidBeltSystem extends EntitySystem {
         AsteroidRemovedQueue remove = removePool.obtain();
         remove.init(asteroid, pos, vel, angle, angularVel);
         spawnQ.add(remove);
+        
+        getEngine().getSystem(SoundSystem.class).asteroidShatter(asteroid.composition);
     }
 
     private void processAsteroidDestructionQueue() {
