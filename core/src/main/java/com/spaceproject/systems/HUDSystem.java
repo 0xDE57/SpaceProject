@@ -649,7 +649,7 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
         
         drawStat(stats.resourcesCollected + "", "resources collected", leftEdge, messageHeight - height * h++, rightEdge, (h % 2 == 0) ? colorA : colorB);
         
-        drawStat(stats.resourcesLost + "", "resources lost", leftEdge, messageHeight - height * h++, rightEdge, (h % 2 == 0) ? colorA : colorB);
+        //drawStat(stats.resourcesLost + "", "resources lost", leftEdge, messageHeight - height * h++, rightEdge, (h % 2 == 0) ? colorA : colorB);
         
         drawStat(stats.profit + "", "profit", leftEdge, messageHeight - height * h++, rightEdge, (h % 2 == 0) ? colorA : colorB);
     }
