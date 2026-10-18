@@ -91,6 +91,7 @@ Thanks to all the developers who built the open source technology that powers th
 - [OpenSimplexNoise](https://gist.github.com/KdotJPG/b1270127455a94ac5d19)
 - [VisUI](https://github.com/kotcrab/vis-ui)
 - [TuningFork](https://github.com/Hangman/TuningFork)
+- [ShapeDrawer](https://github.com/earlygrey/shapedrawer)
 
 
 ## Building
