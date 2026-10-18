@@ -77,7 +77,7 @@ Credit appreciated. Contributions welcome!
 
 ## Thank!
 
-Thanks to the incredibly knowledgable and helpful libGDX community for guiding me along the way. This game would not exist with out you.
+Thanks to the incredibly knowledgeable and helpful libGDX community for guiding me along the way. This game would not exist without you.
 
 Thanks to L1T for hosting Devember.
 
