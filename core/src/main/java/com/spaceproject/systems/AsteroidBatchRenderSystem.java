@@ -50,6 +50,8 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
     
     PathMode mode = PathMode.INSET;
     
+    boolean debugRenderTriangleQuality = false;
+    
     public AsteroidBatchRenderSystem() {
         super(Family.all(AsteroidComponent.class, TransformComponent.class).get());
         
@@ -242,6 +244,16 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
             }
         }*/
         
+        if (debugRenderTriangleQuality && polygon.getVertices().length == 6) {
+            float[] verts = polygon.getVertices();
+            float quality = GeometryUtils.triangleQuality(
+                verts[0], verts[1],
+                verts[2], verts[3],
+                verts[4], verts[5]);
+            tempColor.set(quality, quality, quality, 1);
+            shapeDrawer.setColor(tempColor);
+            shapeDrawer.filledPolygon(polygon);
+        }
     }
     
 }
