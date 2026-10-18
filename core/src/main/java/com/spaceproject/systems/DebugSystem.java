@@ -304,7 +304,6 @@ public class DebugSystem extends IteratingSystem implements Disposable {
                     try {
                         val = f.get(c);
                     } catch (Throwable ex) {
-                        // don't allocate stack traces or strings here; just append a short token
                         val = "???";
                         Gdx.app.debug(getClass().getSimpleName(), "Failed to get: " + f.getName(), ex);
                     }
