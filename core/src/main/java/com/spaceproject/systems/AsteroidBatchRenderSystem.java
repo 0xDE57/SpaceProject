@@ -13,7 +13,6 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.*;
-import com.badlogic.gdx.utils.ShortArray;
 import com.spaceproject.components.AsteroidComponent;
 import com.spaceproject.components.HealthComponent;
 import com.spaceproject.components.ItemComponent;
@@ -253,6 +252,8 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
             tempColor.set(quality, quality, quality, 1);
             shapeDrawer.setColor(tempColor);
             shapeDrawer.filledPolygon(polygon);
+            shapeDrawer.setColor(asteroid.color);
+            shapeDrawer.polygon(polygon, lineWidth, JoinType.NONE);
         }
     }
     
