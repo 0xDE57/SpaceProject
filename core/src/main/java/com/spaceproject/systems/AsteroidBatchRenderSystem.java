@@ -10,9 +10,11 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.*;
+import com.badlogic.gdx.utils.Disposable;
 import com.spaceproject.components.AsteroidComponent;
 import com.spaceproject.components.HealthComponent;
 import com.spaceproject.components.ItemComponent;
@@ -23,7 +25,7 @@ import com.spaceproject.utility.Mappers;
 import space.earlygrey.shapedrawer.JoinType;
 import space.earlygrey.shapedrawer.ShapeDrawer;
 
-public class AsteroidBatchRenderSystem extends IteratingSystem {
+public class AsteroidBatchRenderSystem extends IteratingSystem implements Disposable {
     
     boolean debugRevealAll = false;
     
@@ -54,13 +56,13 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
     public AsteroidBatchRenderSystem() {
         super(Family.all(AsteroidComponent.class, TransformComponent.class).get());
         
-        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGB888);
         pixmap.setColor(Color.WHITE);
         pixmap.drawPixel(0, 0);
-        texture = new Texture(pixmap); //remember to dispose of later
+        texture = new Texture(pixmap);
         pixmap.dispose();
         TextureRegion region = new TextureRegion(texture, 0, 0, 1, 1);
-        batch = new SpriteBatch();
+        batch = new PolygonSpriteBatch();
         shapeDrawer = new ShapeDrawer(batch, region);
         polygonCache = new InsetPolygonCache(8);
         
@@ -255,6 +257,11 @@ public class AsteroidBatchRenderSystem extends IteratingSystem {
             shapeDrawer.setColor(asteroid.color);
             shapeDrawer.polygon(polygon, lineWidth, JoinType.NONE);
         }
+    }
+    
+    @Override
+    public void dispose() {
+        batch.dispose();
     }
     
 }
