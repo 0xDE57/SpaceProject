@@ -312,7 +312,8 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
                 inventoryFont.draw(batch, layout, focusedPos.x, focusedPos.y + 1);
             }
 
-            drawStatusInfo(player, uiCFG.playerHPBarWidth, uiCFG.playerHPBarHeight, uiCFG.playerHPBarY + 5);
+            //health bar bottom edge, centered on the side gauges (anchored at playerHPBarY)
+            drawStatusInfo(player, uiCFG.playerHPBarWidth, uiCFG.playerHPBarHeight, uiCFG.playerHPBarY - uiCFG.playerHPBarHeight / 2);
             drawInventory(player, 20, 30);
 
             drawCreditMarkers(deltaTime);
@@ -670,10 +671,12 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
         int barWidth = uiCFG.playerHPBarWidth;
         int barHeight = uiCFG.playerHPBarHeight;
         int barX = Gdx.graphics.getWidth() / 2 - barWidth / 2;
-        int healthBarY = uiCFG.playerHPBarY;
+        //center the bar stack on the side gauges (anchored at playerHPBarY)
+        int healthBarY = uiCFG.playerHPBarY - barHeight / 2;
         int ammoBarY = healthBarY - barHeight - 1;
         int shieldBarY = healthBarY + barHeight + 1;
-        int hyperBarY = shieldBarY + barHeight + 1;
+        //passive shield only takes up a row when the player has one
+        int hyperBarY = shieldBarY + (Mappers.passiveShield.get(entity) != null ? barHeight + 1 : 0);
 
         drawPlayerVelocity(entity, barX, hyperBarY, barWidth, barHeight);
         drawHyperDriveBar(entity, barX, hyperBarY, barWidth, barHeight);
@@ -689,13 +692,13 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
         drawPlayerShield(entity, barX, healthBarY, barWidth, barHeight);
         drawPlayerAmmoBar(entity, barX, ammoBarY, barWidth, barHeight);
 
-        drawCargoResources(entity, barX, healthBarY, deltaTime);
+        drawCargoResources(entity, barX, uiCFG.playerHPBarY, deltaTime);
     }
 
     float animAngle = 0;
     float animRadius = 0;
 
-    private void drawCargoResources(Entity entity, int barX, int healthBarY, float deltaTime) {
+    private void drawCargoResources(Entity entity, int barX, int centerY, float deltaTime) {
         CargoComponent cargo = Mappers.cargo.get(entity);
         if (cargo == null) return;
 
@@ -725,7 +728,7 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
             float ratio = (float) count / total;
             float newAngle = ratio * 360;
             shape.setColor(resource.getColor());
-            shape.arc(barX - radius - 10, healthBarY, animRadius, angle, newAngle);
+            shape.arc(barX - radius - 10, centerY, animRadius, angle, newAngle);
             angle += newAngle;
         }
     }
@@ -772,8 +775,27 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
         shape.rect(x, y, width, height);
 
         float ratioShield = shield.shield / shield.maxShield;
-        shape.setColor(1, 1, 0, 1);
+        shape.setColor(Color.SKY);
         shape.rect(x, y, width * ratioShield, height);
+
+        //cooldown until auto-restore resumes, shrinks as the timer runs out
+        long now = GameScreen.getGameTimeCurrent();
+        if (ratioShield < 1f) {
+            long hitCooldown = shield.lastHit + shield.cooldownDamaged - now;
+            long brokenCooldown = shield.lastBroken + shield.cooldownBroken - now;
+            long remaining, total;
+            if (hitCooldown >= brokenCooldown) {
+                remaining = hitCooldown;
+                total = shield.cooldownDamaged;
+            } else {
+                remaining = brokenCooldown;
+                total = shield.cooldownBroken;
+            }
+            if (remaining > 0 && total > 0) {
+                shape.setColor(0, 0, 0, 0.4f);
+                shape.rect(x, y, width * MathUtils.clamp(remaining / (float) total, 0, 1), height);
+            }
+        }
     }
 
     private void drawPlayerShield(Entity entity, float x, float y, float width, float height) {
@@ -916,13 +938,16 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
 
         int controlsX = Gdx.graphics.getWidth() - 10;
         int barX = Gdx.graphics.getWidth() / 2 - barWidth / 2;
+        PassiveShieldComponent passiveShield = Mappers.passiveShield.get(entity);
+        int shieldBarY = healthBarY + barHeight + 1;
+        int hyperBarY = shieldBarY + (passiveShield != null ? barHeight + 1 : 0);
         HyperDriveComponent hyper = Mappers.hyper.get(entity);
         if (hyper != null && hyper.state == HyperDriveComponent.State.on) {
             cacheColor.set(Color.GOLD).lerp(Color.CYAN, 1 + (float) Math.sin(statusAnim));
             sb.setLength(0);
             sb.append("[ HYPER-DRIVE ]");
             layout.setText(inventoryFont, sb, cacheColor, 0, Align.center, false);
-            inventoryFont.draw(batch, layout, barX + layout.width - 37, healthBarY + barHeight + layout.height - 1);
+            inventoryFont.draw(batch, layout, barX + layout.width - 37, hyperBarY + 3 + layout.height);
             return;
         }
         CameraSystem camSystem = getEngine().getSystem(CameraSystem.class);
@@ -945,7 +970,7 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
             MyMath.roundOneDecimal(sb, physics.body.getLinearVelocity().len());
             //sb.append((int)physics.body.getLinearVelocity().len());
             layout.setText(inventoryFont, sb, tempColor, 0, Align.center, false);
-            inventoryFont.draw(batch, layout, barX + barWidth + radius + 10, healthBarY - 2);
+            inventoryFont.draw(batch, layout, barX + barWidth + radius + 10, uiCFG.playerHPBarY + 3);
         }
         //draw HP
         HealthComponent health = Mappers.health.get(entity);
@@ -965,7 +990,7 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
                 sb.setLength(0);
                 sb.append("[").append(input).append("]");
                 layout.setText(inventoryFont, sb, Color.WHITE, 0, Align.right, false);
-                inventoryFont.draw(batch, layout, controlsX, healthBarY + layout.height);
+                inventoryFont.draw(batch, layout, controlsX, healthBarY + 5 + layout.height);
                 if (shield.state == ShieldComponent.State.on) {
                     color = Color.BLUE;
                 }
@@ -975,22 +1000,20 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
             //MyMath.roundOneDecimal(sb, health.health);
             sb.append((int)health.health);
             layout.setText(inventoryFont, sb, color, 0, Align.center, false);
-            inventoryFont.draw(batch, layout, barX + barWidth * 0.5f, healthBarY + layout.height - 2);
+            inventoryFont.draw(batch, layout, barX + barWidth * 0.5f, healthBarY + 3 + layout.height);
         }
 
         //draw passive shield
-        PassiveShieldComponent passiveShield = Mappers.passiveShield.get(entity);
         if (passiveShield != null) {
             float ratio = passiveShield.shield / passiveShield.maxShield;
             Color color = ratio > 0.66 ? Color.GREEN : ratio > 0.33 ? Color.WHITE : Color.RED;
             if (GameScreen.getGameTimeCurrent() - passiveShield.lastHit < 1000) {
                 color = Color.RED;
             }
-            int shieldBarY = uiCFG.playerHPBarY + uiCFG.playerHPBarHeight + 1;
             sb.setLength(0);
             sb.append((int)passiveShield.shield);
             layout.setText(inventoryFont, sb, color, 0, Align.center, false);
-            inventoryFont.draw(batch, layout, barX + barWidth * 0.5f, shieldBarY + 5 + layout.height - 2);
+            inventoryFont.draw(batch, layout, barX + barWidth * 0.5f, shieldBarY + 3 + layout.height);
         }
 
         VehicleComponent vehicleComponent = Mappers.vehicle.get(entity);
@@ -1005,7 +1028,7 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
             }
             sb.append(" | [").append(input).append("] cycle");
             layout.setText(inventoryFont, sb, Color.WHITE, 0, Align.right, false);
-            inventoryFont.draw(batch, layout, controlsX, healthBarY - barHeight + layout.height - 3);
+            inventoryFont.draw(batch, layout, controlsX, healthBarY - barHeight + 2 + layout.height);
         }
     }
 
