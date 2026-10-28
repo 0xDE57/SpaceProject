@@ -190,7 +190,8 @@
           "properties": {
             "animTimer": 50,
             "defence": 100,
-            "cooldownRate": 0.1
+            "cooldownRate": 0.1,
+            "impactMultiplier": 0.001
           }
         }
       ]

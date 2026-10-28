@@ -357,14 +357,13 @@ public class Box2DContactListener implements ContactListener {
                 //todo: apply damage saved as heat
                 //shield.heat += relativeDamage * 0.0001f; //shield.heatResistance;
                 if (shield.heat > 1) {
-                    shield.overHeat += shield.heat-1;
+                    shield.overHeat += shield.heat - 1;
                     shield.heat = 1f;
                 }
             }
             //todo: break shield if impact is hard enough
             //int shieldBreakThreshold = 500;
-            //if (impulse > shieldBreakThreshold) { 
-            // do damage to other entity, scaled to impulse
+            //if (impulse > shieldBreakThreshold) {
             // break shield effect animation
             // }
             if (impulse > 1) {
@@ -375,6 +374,15 @@ public class Box2DContactListener implements ContactListener {
             AsteroidComponent asteroid = Mappers.asteroid.get(otherBody);
             if (asteroid != null) {
                 asteroid.lastShieldHit = timestamp;
+                if (impulse > vehicleDamageThreshold) {
+                    //"Shield Bash": bonus damage relative to size of asteroid and how hard impact impulse was
+                    //float shieldDamage = (impulse * shield.impactMultiplier);
+                    //float shieldDamage = (impulse * shield.impactMultiplier) * asteroid.area;
+                    float shieldDamage = (impulse * impactMultiplier) * asteroid.area;
+                    shieldDamage *= shield.impactMultiplier;
+                    Gdx.app.debug(getClass().getSimpleName(), "shield impact damage: " + shieldDamage + " to [" + DebugUtil.objString(otherBody) + "]");
+                    damage(engine, otherBody, entity, shieldDamage, contact, Mappers.physics.get(otherBody).body);
+                }
             }
             return; //protected by shield
         }

@@ -28,5 +28,7 @@ public class ShieldComponent implements Component {
     public float heatResistance;
 
     public float cooldownRate;
+    
+    public float impactMultiplier;
 
 }
