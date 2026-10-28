@@ -432,11 +432,12 @@ public class Box2DContactListener implements ContactListener {
             float remainingDamage = damage - passiveShield.shield;
             //Gdx.app.debug("", "shield: " + passiveShield.shield + ", damage: " + damage + ", remain:" + remainingDamage);
             passiveShield.shield -= damage;
-            passiveShield.cooldownDamaged.reset();
+            long timestamp = GameScreen.getGameTimeCurrent();
+            passiveShield.lastHit = timestamp;
             if (passiveShield.shield <= 0) {
                 //break passive shield
                 passiveShield.shield = 0;
-                passiveShield.cooldownBroken.reset();
+                passiveShield.lastBroken = timestamp;
                 //todo: passive shield break sound
                 Gdx.app.debug("", "shield broken");
             }

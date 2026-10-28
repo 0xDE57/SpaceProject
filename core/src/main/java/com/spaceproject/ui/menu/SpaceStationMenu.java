@@ -244,6 +244,8 @@ public class SpaceStationMenu {
                             Class<?> fieldType = f.getType();
                             if (fieldType == int.class) {
                                 f.set(componentToUpgrade, field.asInt());
+                            } else if (fieldType == long.class) {
+                                f.set(componentToUpgrade, field.asLong());
                             } else if (fieldType == float.class) {
                                 f.set(componentToUpgrade, field.asFloat());
                             } else if (fieldType == double.class) {

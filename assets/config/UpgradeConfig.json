@@ -145,28 +145,36 @@
           "level": 1,
           "properties": {
             "maxShield": 50,
-            "restoreRate": 1
+            "restoreRate": 1,
+            "cooldownDamaged": 5000,
+            "cooldownBroken": 10000
           }
         },
         {
           "level": 2,
           "properties": {
             "maxShield": 100,
-            "restoreRate": 2
+            "restoreRate": 2,
+            "cooldownDamaged": 4500,
+            "cooldownBroken": 9500
           }
         },
         {
           "level": 3,
           "properties": {
             "maxShield": 150,
-            "restoreRate": 4
+            "restoreRate": 4,
+            "cooldownDamaged": 4000,
+            "cooldownBroken": 9000
           }
         },
         {
           "level": 4,
           "properties": {
             "maxShield": 200,
-            "restoreRate": 6
+            "restoreRate": 6,
+            "cooldownDamaged": 3500,
+            "cooldownBroken": 8500
           }
         }
       ]
