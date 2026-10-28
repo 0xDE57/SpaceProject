@@ -126,22 +126,8 @@ public class SpaceStationMenu {
         String shieldControl = controllerHasFocus ? "LT" : Input.Keys.toString(keyConfig.activateShield);
         String laserControl = controllerHasFocus ? "RT" : "L-Click";
 
-        String shieldUpgrade = "Active Shield".toUpperCase();
-        String hyperdriveUpgrade = "Hyper-Drive".toUpperCase();
-        String laserUpgrade = "Laser".toUpperCase();
-        String tractorUpgrade = "Tractor Beam".toUpperCase();
-        String hyperdriveDescription = String.format("[%s]%s[]\nenable deep-space exploration.\n\nHold [%s][%s][] to activate.",
-                colorItem, hyperdriveUpgrade, colorControl, hyperControl);
-        String shieldDescription = String.format("[%s]%s[]\nprotect your ship from damage.\n\nHold [%s][%s][] to activate.",
-                colorItem, shieldUpgrade, colorControl, shieldControl);
-        String laserDescription = String.format("[%s]%s[]\nprecision tool.\n\nHold [%s][%s][] to activate.",
-                colorItem, laserUpgrade, colorControl, laserControl);
-        String tractorBeamDescription = String.format("[%s]%s[]\npush or pull objects.\n\nHold [%s][%s][] to activate.\nDouble Tap to toggle between PUSH & PULL",
-                colorItem, tractorUpgrade, colorControl, laserControl);
-
-
-        ScrollableTextArea text = new ScrollableTextArea("");
-        text.removeListener(text.getDefaultInputListener());
+        VisLabel descriptionLabel = new VisLabel("");
+        descriptionLabel.setWrap(true);
         VisTable creditsTable = new VisTable();
         VisLabel creditsText = new VisLabel("CREDITS: ");
         creditsTable.add(creditsText);
@@ -167,6 +153,26 @@ public class SpaceStationMenu {
             String upgradeDescriptionTemplate = upgrade.getString("description");
             int upgradeCost = upgrade.getInt("cost");
             JsonValue levels = upgrade.get("levels");
+
+            //control key shown in the description, if any; tools share the laser control
+            String controlKey = "";
+            switch (componentClass) {
+                case "HyperDriveComponent":
+                    controlKey = hyperControl;
+                    break;
+                case "ShieldComponent":
+                    controlKey = shieldControl;
+                    break;
+                case "LaserComponent":
+                case "TractorBeamComponent":
+                    controlKey = laserControl;
+                    break;
+            }
+
+            //description shown in the text area when the button has focus
+            String upgradeDescription = upgradeDescriptionTemplate == null || upgradeDescriptionTemplate.isEmpty()
+                    ? upgradeName
+                    : String.format(upgradeDescriptionTemplate, colorItem, upgradeName.toUpperCase(), colorControl, controlKey);
 
             VisTextButton upgradeButton = new VisTextButton("[" + colorItem + "]" + upgradeName);
 
@@ -291,7 +297,7 @@ public class SpaceStationMenu {
                     //update UI
                     creditsValue.setText(cargo.credits);
                     creditsValue.addAction(sequence(color(Color.valueOf(colorItem)), color(Color.valueOf(colorCredits), 1f)));
-                    levelLabel.setText(" [" + lvl + "/" + maxLevel + "] ");
+                    levelLabel.setText("  " + lvl + "/" + maxLevel + "  ");
                     if (lvl == maxLevel) {
                         upgradeButton.setDisabled(true);
                     }
@@ -300,8 +306,7 @@ public class SpaceStationMenu {
             upgradeButton.addListener(new FocusListener() {
                 @Override
                 public boolean handle(Event event) {
-                    //String upgradeDescription = String.format(upgradeDescriptionTemplate, colorItem, upgradeName, colorControl, hyperControl);
-                    text.setText(upgradeName);
+                    descriptionLabel.setText(upgradeDescription);
                     return super.handle(event);
                 }
             });
@@ -324,7 +329,7 @@ public class SpaceStationMenu {
         buttonDebugGiveMoney.addListener(new FocusListener() {
             @Override
             public boolean handle(Event event) {
-                text.setText("cheater...");
+                descriptionLabel.setText("cheater...");
                 return super.handle(event);
             }
         });
@@ -332,8 +337,7 @@ public class SpaceStationMenu {
         //buttonTable.debugAll();
 
         VisTable descTable = new VisTable();
-        text.setReadOnly(true);
-        descTable.add(text.createCompatibleScrollPane()).height(190).width(200).row();
+        descTable.add(new VisScrollPane(descriptionLabel)).height(190).width(200).row();
 
         VisWindow window = new VisWindow("[" + titleColor + "]STATION DELTA");
         window.getTitleLabel().setAlignment(Align.center);

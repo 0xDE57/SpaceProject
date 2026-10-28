@@ -3,7 +3,7 @@
     {
       "component": "VehicleComponent",
       "name": "Engine",
-      "description": "Increase [%s]THRUST\nby: [%s]%s[]\nCurrent: [%s]%s",
+      "description": "[%s]%s[]\nIncrease engine thrust.",
       "cost": 20000,
       "levels": [
         {
@@ -39,7 +39,7 @@
     {
       "component": "HealthComponent",
       "name": "Health",
-      "description": "Increase [%s]HP[]\nby: [%s]%s\nCurrent:  [%s]%s",
+      "description": "[%s]%s[]\nIncrease maximum HP.",
       "cost": 40000,
       "levels": [
         {
@@ -77,7 +77,7 @@
     {
       "component": "CannonComponent",
       "name": "Cannon",
-      "description": "",
+      "description": "[%s]%s[]\nIncrease damage and velocity.",
       "cost": 25000,
       "levels": [
         {
@@ -138,7 +138,7 @@
     {
       "component": "PassiveShieldComponent",
       "name": "Passive Shield",
-      "description": "todo",
+      "description": "[%s]%s[]\nAbsorbs damage and restores over time.",
       "cost": 25000,
       "levels": [
         {
@@ -182,7 +182,7 @@
     {
       "component": "ShieldComponent",
       "name": "Active Shield",
-      "description": "[%s]%s[]\nprotect your ship from damage.\n\nHold [%s][%s][] to activate.",
+      "description": "[%s]%s[]\nProtect your ship from damage.\n\nHold [%s][%s][] to activate.",
       "cost": 25000,
       "levels": [
         {
@@ -198,7 +198,7 @@
     {
       "component": "HyperDriveComponent",
       "name": "Hyper-Drive",
-      "description": "[%s]%s[]\nenable deep-space exploration.\n\nHold [%s][%s][] to activate.",
+      "description": "[%s]%s[]\nEnable deep-space exploration.\n\nHold [%s][%s][] to activate.",
       "cost": 100000,
       "levels": [
         {
@@ -215,7 +215,7 @@
     {
       "component": "LaserComponent",
       "name": "Laser",
-      "description": "[%s]%s[]\nprecision tool.\n\nHold [%s][%s][] to activate.",
+      "description": "[%s]%s[]\nPrecision tool.\n\nHold [%s][%s][] to activate.",
       "cost": 30000,
       "levels": [
         {
@@ -259,7 +259,7 @@
     {
       "component": "TractorBeamComponent",
       "name": "Tractor Beam",
-      "description": "[%s]%s[]\npush or pull objects.\n\nHold [%s][%s][] to activate.\nDouble Tap to toggle between PUSH & PULL",
+      "description": "[%s]%s[]\nPush or pull objects.\n\nHold [%s][%s][] to activate.\nDouble Tap to toggle between PUSH & PULL",
       "cost": 10000,
       "levels": [
         {
