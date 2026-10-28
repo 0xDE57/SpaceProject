@@ -115,6 +115,7 @@ public class SpaceStationMenu {
     public static Actor SpaceStationMenu(ControllerMenuStage stage, Entity player, Engine engine) {
         //enable color markup
         VisUI.getSkin().get("default-font", BitmapFont.class).getData().markupEnabled = true;
+        VisUI.getSkin().get("small-font", BitmapFont.class).getData().markupEnabled = true;
         String titleColor = "#0090d2";
         String colorItem = "#14B1FFFF";
         String colorCredits = "#77FF14";
@@ -126,7 +127,11 @@ public class SpaceStationMenu {
         String shieldControl = controllerHasFocus ? "LT" : Input.Keys.toString(keyConfig.activateShield);
         String laserControl = controllerHasFocus ? "RT" : "L-Click";
 
-        VisLabel descriptionLabel = new VisLabel("");
+        //small font so the current -> next value lines fit in the description pane
+        VisLabel.LabelStyle descriptionStyle = new VisLabel.LabelStyle();
+        descriptionStyle.font = VisUI.getSkin().get("small-font", BitmapFont.class);
+        descriptionStyle.fontColor = Color.WHITE;
+        VisLabel descriptionLabel = new VisLabel("", descriptionStyle);
         descriptionLabel.setWrap(true);
         VisTable creditsTable = new VisTable();
         VisLabel creditsText = new VisLabel("CREDITS: ");
@@ -298,6 +303,7 @@ public class SpaceStationMenu {
                     creditsValue.setText(cargo.credits);
                     creditsValue.addAction(sequence(color(Color.valueOf(colorItem)), color(Color.valueOf(colorCredits), 1f)));
                     levelLabel.setText("  " + lvl + "/" + maxLevel + "  ");
+                    descriptionLabel.setText(buildUpgradeDescription(upgradeDescription, colorItem, componentClass, levels, lvl, player));
                     if (lvl == maxLevel) {
                         upgradeButton.setDisabled(true);
                     }
@@ -306,7 +312,9 @@ public class SpaceStationMenu {
             upgradeButton.addListener(new FocusListener() {
                 @Override
                 public boolean handle(Event event) {
-                    descriptionLabel.setText(upgradeDescription);
+                    //read level live so the current -> next values are always up to date
+                    int level = player.getComponent(UpgradeComponent.class).map.getOrDefault(componentClass, 0);
+                    descriptionLabel.setText(buildUpgradeDescription(upgradeDescription, colorItem, componentClass, levels, level, player));
                     return super.handle(event);
                 }
             });
@@ -358,6 +366,90 @@ public class SpaceStationMenu {
         stage.setFocusedActor(buttonTable.getChildren().first());
 
         return window;
+    }
+
+    //builds the description shown in the description label when an upgrade button has focus;
+    //appends the current -> next values of the properties changed by the next level,
+    //or just the current values when the upgrade is at max level
+    private static String buildUpgradeDescription(String baseDescription, String nextColor, String componentClass, JsonValue levels, int currentLevel, Entity player) {
+        //the next level, or the max level if fully upgraded
+        JsonValue level = currentLevel >= levels.size ? levels.get(levels.size - 1) : levels.get(currentLevel);
+        JsonValue levelProperties = level.get("properties");
+        if (levelProperties == null || levelProperties.isEmpty()) {
+            return baseDescription;
+        }
+
+        //current values are read from the component if it exists
+        Component current = findComponent(player.getComponents(), componentClass);
+        if (current == null) {
+            VehicleComponent vehicle = player.getComponent(VehicleComponent.class);
+            if (vehicle != null) {
+                current = findComponent(vehicle.tools.values(), componentClass);
+            }
+        }
+
+        StringBuilder sb = new StringBuilder(baseDescription);
+        for (JsonValue property : levelProperties) {
+            sb.append(sb.length() == baseDescription.length() ? "\n\n" : "\n");
+            sb.append(formatFieldName(property.name)).append(": ");
+            if (current != null) {
+                sb.append(formatValue(readField(current, property.name)));
+                if (currentLevel < levels.size) {
+                    sb.append(" -> [").append(nextColor).append("]").append(formatValue(property.asFloat())).append("[]");
+                }
+            } else {
+                //unowned; just show the value the component will be created with
+                sb.append("[").append(nextColor).append("]").append(formatValue(property.asFloat())).append("[]");
+            }
+        }
+        return sb.toString();
+    }
+
+    //splits camelCase field names into words, eg: maxShield -> "Max shield"
+    private static String formatFieldName(String fieldName) {
+        if (fieldName.isEmpty()) {
+            return fieldName;
+        }
+        String[] words = fieldName.split("(?=[A-Z])");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < words.length; i++) {
+            if (i > 0) {
+                sb.append(" ");
+            }
+            sb.append(words[i].toLowerCase());
+        }
+        sb.setCharAt(0, Character.toUpperCase(sb.charAt(0)));
+        return sb.toString();
+    }
+
+    private static Object readField(Component component, String fieldName) {
+        try {
+            return component.getClass().getField(fieldName).get(component);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            return null;
+        }
+    }
+
+    private static String formatValue(Object value) {
+        if (value == null) {
+            return "none";
+        }
+        if (value instanceof SimpleTimer) {
+            return String.valueOf(((SimpleTimer) value).getInterval());
+        }
+        if (value instanceof Number) {
+            Number n = (Number) value;
+            if (n instanceof Float || n instanceof Double) {
+                double d = n.doubleValue();
+                //drop the decimal when it is a whole number, eg: 2000.0f -> 2000
+                if (d == Math.floor(d) && !Double.isInfinite(d) && Math.abs(d) < 1E15) {
+                    return String.valueOf((long) d);
+                }
+                return n.toString();
+            }
+            return String.valueOf(n.longValue());
+        }
+        return value.toString();
     }
 
     private static Component findComponent(Collection<Component> components, String componentClass) {
