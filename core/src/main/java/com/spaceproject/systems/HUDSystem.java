@@ -672,7 +672,8 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
         int barX = Gdx.graphics.getWidth() / 2 - barWidth / 2;
         int healthBarY = uiCFG.playerHPBarY;
         int ammoBarY = healthBarY - barHeight - 1;
-        int hyperBarY = healthBarY + barHeight + 1;
+        int shieldBarY = healthBarY + barHeight + 1;
+        int hyperBarY = shieldBarY + barHeight + 1;
 
         drawPlayerVelocity(entity, barX, hyperBarY, barWidth, barHeight);
         drawHyperDriveBar(entity, barX, hyperBarY, barWidth, barHeight);
@@ -684,7 +685,7 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
         }
 
         drawPlayerHealth(entity, barX, healthBarY, barWidth, barHeight);
-        drawPlayerPassiveShield(entity, barX, healthBarY, barWidth, barHeight);
+        drawPlayerPassiveShield(entity, barX, shieldBarY, barWidth, barHeight);
         drawPlayerShield(entity, barX, healthBarY, barWidth, barHeight);
         drawPlayerAmmoBar(entity, barX, ammoBarY, barWidth, barHeight);
 
@@ -766,7 +767,10 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
         if (shield == null) {
             return;
         }
-        
+
+        shape.setColor(uiCFG.entityHPbarBackground);
+        shape.rect(x, y, width, height);
+
         float ratioShield = shield.shield / shield.maxShield;
         shape.setColor(1, 1, 0, 1);
         shape.rect(x, y, width * ratioShield, height);
@@ -972,6 +976,21 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
             sb.append((int)health.health);
             layout.setText(inventoryFont, sb, color, 0, Align.center, false);
             inventoryFont.draw(batch, layout, barX + barWidth * 0.5f, healthBarY + layout.height - 2);
+        }
+
+        //draw passive shield
+        PassiveShieldComponent passiveShield = Mappers.passiveShield.get(entity);
+        if (passiveShield != null) {
+            float ratio = passiveShield.shield / passiveShield.maxShield;
+            Color color = ratio > 0.66 ? Color.GREEN : ratio > 0.33 ? Color.WHITE : Color.RED;
+            if (GameScreen.getGameTimeCurrent() - passiveShield.lastHit < 1000) {
+                color = Color.RED;
+            }
+            int shieldBarY = uiCFG.playerHPBarY + uiCFG.playerHPBarHeight + 1;
+            sb.setLength(0);
+            sb.append((int)passiveShield.shield);
+            layout.setText(inventoryFont, sb, color, 0, Align.center, false);
+            inventoryFont.draw(batch, layout, barX + barWidth * 0.5f, shieldBarY + 5 + layout.height - 2);
         }
 
         VehicleComponent vehicleComponent = Mappers.vehicle.get(entity);
