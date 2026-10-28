@@ -26,7 +26,13 @@ public class PassiveShieldSystem extends IteratingSystem {
         if (shield.shield < shield.maxShield && now - shield.lastHit < shield.cooldownDamaged)
             return;
         
-        shield.shield += shield.restoreRate * deltaTime;
+        float restoreRate = shield.restoreRate;
+        //docked ships repair at 2x speed
+        if (Mappers.docked.get(entity) != null) {
+            restoreRate *= 2;
+        }
+        
+        shield.shield += restoreRate * deltaTime;
         
         if (shield.shield >= shield.maxShield) {
             shield.shield = shield.maxShield;
