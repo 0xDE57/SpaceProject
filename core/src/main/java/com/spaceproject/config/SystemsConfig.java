@@ -55,6 +55,8 @@ public class SystemsConfig extends Config {
         systems.add(new SysCFG(WorldLoadingSystem.class, 90, true, false, true));
         systems.add(new SysCFG(SpaceLoadingSystem.class, 91, false, true, false));
         systems.add(new SysCFG(AsteroidBeltSystem.class, 92, true, true, false));
+        //blast impulse after asteroid shatter, so shards spawned this frame also get pushed outward
+        systems.add(new SysCFG(ExplosionSystem.class, 93, true, true, true));
         systems.add(new SysCFG(PlayerSpawnSystem.class, 99, true, true, true));
         //systems.add(new SysCFG(PlanetAISpawnerSystem.class, 93, true, true, false, true, true));
         

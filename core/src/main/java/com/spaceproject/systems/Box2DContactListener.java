@@ -532,7 +532,12 @@ public class Box2DContactListener implements ContactListener {
                 PhysicsComponent physics = Mappers.physics.get(source);
                 damage(engine, source, entity, 10000, damagedBody.getPosition(), physics.body);
             }
-            //todo: apply impulsed blast to nearby asteroids, based on distance to exprosion
+            //radial blast: push nearby bodies (asteroid shards, asteroids, ships) outward from explosion
+            engine.getSystem(ExplosionSystem.class).queueBlast(damagedBody.getPosition());
+            //visual: expanding blast ring (player death already gets its own red ring in respawnPlayer)
+            if (Mappers.controlFocus.get(entity) == null) {
+                ProjectileHitRenderSystem.hit(damagedBody.getPosition().x, damagedBody.getPosition().y, Color.ORANGE);
+            }
             
             Gdx.app.log(Box2DContactListener.class.getSimpleName(), "[" + DebugUtil.objString(entity) + "] destroyed by: [" + DebugUtil.objString(source) + "]");
             engine.getSystem(SoundSystem.class).shipExplode();
