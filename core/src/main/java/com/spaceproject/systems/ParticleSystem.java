@@ -36,6 +36,8 @@ public class ParticleSystem extends IteratingSystem implements EntityListener, D
     ParticleEffectPool chargeEffectPool;
     ParticleEffect explodeEffect;
     ParticleEffectPool explodeEffectPool;
+    ParticleEffect shipExplodeEffect;
+    ParticleEffectPool shipExplodeEffectPool;
     ParticleEffect tailEffect;
     ParticleEffectPool tailEffectPool;
     ParticleEffect shieldEffect;
@@ -82,6 +84,12 @@ public class ParticleSystem extends IteratingSystem implements EntityListener, D
         }
         explodeEffectPool = new ParticleEffectPool(explodeEffect, 20, 40);
     
+        //ship explosion (one-shot burst)
+        shipExplodeEffect = new ParticleEffect();
+        shipExplodeEffect.load(Gdx.files.internal("particles/explosion.particle"), Gdx.files.internal("particles/"));
+        shipExplodeEffect.scaleEffect(particleScale);
+        shipExplodeEffectPool = new ParticleEffectPool(shipExplodeEffect, 5, 10);
+    
         //shield charge
         shieldEffect = new ParticleEffect();
         shieldEffect.load(Gdx.files.internal("particles/absorb2.particle"), Gdx.files.internal("particles/"));
@@ -122,6 +130,9 @@ public class ParticleSystem extends IteratingSystem implements EntityListener, D
                 break;
             case bulletExplode:
                 updateExplodeParticle(entity, particle);
+                break;
+            case shipExplode:
+                updateShipExplodeParticle(entity, particle);
                 break;
             case projectileTrail:
                 updateTailParticle(entity, particle);
@@ -237,6 +248,11 @@ public class ParticleSystem extends IteratingSystem implements EntityListener, D
         particle.pooledEffect.setPosition(transform.pos.x, transform.pos.y);
     }
     
+    private void updateShipExplodeParticle(Entity entity, ParticleComponent particle) {
+        TransformComponent transform = Mappers.transform.get(entity);
+        particle.pooledEffect.setPosition(transform.pos.x, transform.pos.y);
+    }
+    
     private void updateShieldChargeParticle(Entity entity, ParticleComponent particle) {
         ShieldComponent shield = Mappers.shield.get(entity);
         if (shield != null) {
@@ -296,6 +312,11 @@ public class ParticleSystem extends IteratingSystem implements EntityListener, D
                 particle.pooledEffect = explodeEffectPool.obtain();
                 particle.pooledEffect.start();
                 break;
+            case shipExplode:
+                //one-shot burst, fire once on spawn and let it complete
+                particle.pooledEffect = shipExplodeEffectPool.obtain();
+                particle.pooledEffect.start();
+                break;
             case projectileTrail:
                 particle.pooledEffect = tailEffectPool.obtain();
                 //start with emitter on
@@ -321,6 +342,9 @@ public class ParticleSystem extends IteratingSystem implements EntityListener, D
                 break;
             case bulletExplode:
                 explodeEffectPool.free(particle.pooledEffect);
+                break;
+            case shipExplode:
+                shipExplodeEffectPool.free(particle.pooledEffect);
                 break;
             case projectileTrail:
                 tailEffectPool.free(particle.pooledEffect);
@@ -370,6 +394,7 @@ public class ParticleSystem extends IteratingSystem implements EntityListener, D
         tailEffect.dispose();
         shieldEffect.dispose();
         explodeEffect.dispose();
+        shipExplodeEffect.dispose();
         spriteBatch.dispose();
     }
     

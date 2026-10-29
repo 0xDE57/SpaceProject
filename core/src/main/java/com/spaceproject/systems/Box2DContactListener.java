@@ -595,8 +595,34 @@ public class Box2DContactListener implements ContactListener {
         respawnEntity.add(respawn);
 
         engine.addEntity(respawnEntity);
-        ProjectileHitRenderSystem.hit(transform.pos.x, transform.pos.y, Color.RED);//todo: replace with explode particle effect
+        //explode particle fx at death location (separate short-lived entity)
+        spawnExplosion(engine, transform.pos);
+        //outward ring effect
+        ProjectileHitRenderSystem.hit(transform.pos.x, transform.pos.y, Color.RED);
         Gdx.app.debug(Box2DContactListener.class.getSimpleName(), "create respawn(" + respawn.reason + ") marker: " + DebugUtil.objString(respawnEntity) + " for " + DebugUtil.objString(entity));
+    }
+
+    /** creates a short-lived entity that plays a one-shot explosion particle burst at the given position.
+     *  self-removes via {@link ExpireComponent} once the burst has finished. */
+    private static void spawnExplosion(Engine engine, Vector2 pos) {
+        Entity explosionEntity = new Entity();
+
+        TransformComponent transform = new TransformComponent();
+        transform.pos.set(pos);
+        explosionEntity.add(transform);
+
+        ParticleComponent particle = new ParticleComponent();
+        particle.type = ParticleComponent.EffectType.shipExplode;
+        particle.offset = new Vector2();
+        particle.angle = 0;
+        explosionEntity.add(particle);
+
+        //self-destroy after the burst has finished playing
+        ExpireComponent expire = new ExpireComponent();
+        expire.timer = new SimpleTimer(2000, true);
+        explosionEntity.add(expire);
+
+        engine.addEntity(explosionEntity);
     }
 
 }
