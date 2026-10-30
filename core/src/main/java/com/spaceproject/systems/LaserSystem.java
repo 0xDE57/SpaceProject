@@ -19,6 +19,7 @@ import com.spaceproject.config.DebugConfig;
 import com.spaceproject.math.MyMath;
 import com.spaceproject.math.Physics;
 import com.spaceproject.screens.GameScreen;
+import com.spaceproject.utility.BeamShapeRender;
 import com.spaceproject.utility.Mappers;
 
 public class LaserSystem extends IteratingSystem implements Disposable {
@@ -116,7 +117,13 @@ public class LaserSystem extends IteratingSystem implements Disposable {
         
         endColor.set(Color.CLEAR).lerp(color, MathUtils.random()*0.25f);
         ratio.set(color).lerp(endColor, range - MathUtils.random()*0.15f);
-        shape.rectLine(p1.x, p1.y, p2.x, p2.y, 0.2f, color, ratio);
+        //shape.rectLine(p1.x, p1.y, p2.x, p2.y, 0.2f, color, ratio);
+        //shape.rectLine(p1.x, p1.y, p2.x, p2.y, 0.1f, Color.WHITE, Color.WHITE);
+        //shape.rectLine(p1.x, p1.y, p2.x, p2.y, length, Color.RED, Color.PURPLE);
+        //rectLineFilled(shape, p1.x, p1.y, p2.x, p2.y, 0.2f, Color.RED, Color.PURPLE);
+        //rectLineFilled(shape, p1.x, p1.y, p2.x, p2.y, 0.2f, Color.WHITE, Color.BLACK);
+        BeamShapeRender.rectLineBeam(shape, p1, p2, 0.3f, color, Color.CLEAR);
+        
 
         if (rayFixture == null) return;
         //we hit something!
@@ -135,26 +142,6 @@ public class LaserSystem extends IteratingSystem implements Disposable {
                 //remainingDistance *= asteroid.albedo;
                 
                 Body asteroidBody = rayFixture.getBody();
-                
-                //TransformComponent trans = Mappers.transform.get(hitEntity);
-                //asteroid.polygon.setPosition(asteroidBody.getPosition().x, asteroidBody.getPosition().y);
-                //asteroid.polygon.setRotation(asteroidBody.getAngle());
-                
-                /*
-                // Get Box2D polygon vertices (in local space)
-                PolygonShape polygonShape = (PolygonShape) rayFixture.getShape();
-                int vertexCount = polygonShape.getVertexCount();
-                float[] fixtureVertices = new float[vertexCount * 2];
-                Vector2 tempVec = new Vector2();
-                for (int i = 0; i < vertexCount; i++) {
-                    polygonShape.getVertex(i, tempVec);
-                    fixtureVertices[i * 2] = tempVec.x;
-                    fixtureVertices[i * 2 + 1] = tempVec.y;
-                }*/
-                
-                // Convert world-space ray endpoints to local space
-                //Vector2 rayStartLocal = asteroidBody.getLocalPoint(p1);
-                //Vector2 rayEndLocal = asteroidBody.getLocalPoint(tempVec);
                 
                 float dst = p1.dst2(p2);
                 if (dst > 1 && debug.sliceLaser) {
@@ -340,5 +327,53 @@ public class LaserSystem extends IteratingSystem implements Disposable {
         infoString.append("\n[Ray callbacks]:    ").append(callbackCount);
         return infoString.toString();
     }
-
+    
+    /**
+     * Draws a filled "line" between p1 and p2 by creating a rotated rectangle.
+     * The rectangle's length runs from p1 to p2 and its thickness is `thickness`.
+     * colorStart will be applied to the vertices on one side of the thickness
+     * and colorEnd to the opposite side, causing the GPU to interpolate across
+     * the thickness (perpendicular to the line).
+     *
+     * Note: call sr.begin(ShapeRenderer.ShapeType.Filled) before calling this.
+     */
+    public static void rectLineFilled(ShapeRenderer sr, float x1, float y1, float x2, float y2, float thickness, Color colorStart, Color colorEnd) {
+        // length and angle
+        float dx = x2 - x1;
+        float dy = y2 - y1;
+        float length = (float)Math.sqrt(dx * dx + dy * dy);
+        
+        // handle degenerate (zero-length) case: draw square centered at point
+        if (length <= 1e-6f) {
+            float half = thickness * 0.5f;
+            // Use rect with no rotation, colors top/bottom to get gradient across thickness
+            sr.rect(x1 - half, y1 - half, half, half, thickness, thickness, 1f, 1f, 0f,
+                colorStart, colorStart, colorEnd, colorEnd);
+            return;
+        }
+        
+        float angleDeg = (float)Math.toDegrees(Math.atan2(dy, dx));
+        
+        // center point
+        float cx = (x1 + x2) * 0.5f;
+        float cy = (y1 + y2) * 0.5f;
+        
+        // lower-left corner of rectangle before rotation: center - (length/2, thickness/2)
+        float rectX = cx - length * 0.5f;
+        float rectY = cy - thickness * 0.5f;
+        
+        // rotate around center
+        float originX = length * 0.5f;
+        float originY = thickness * 0.5f;
+        
+        // Assign same color to both bottom vertices (colorStart) and same color to both top vertices (colorEnd)
+        // rect parameters: x,y, originX, originY, width, height, scaleX, scaleY, degrees, colBL, colBR, colTR, colTL
+        sr.rect(rectX, rectY, originX, originY, length, thickness, 1f, 1f, angleDeg, colorStart, colorStart, colorEnd, colorEnd);
+    }
+    
+    /** Convenience overload using Vector2 points. */
+    public static void rectLineFilled(ShapeRenderer sr, Vector2 p1, Vector2 p2, float thickness, Color colorStart, Color colorEnd) {
+        rectLineFilled(sr, p1.x, p1.y, p2.x, p2.y, thickness, colorStart, colorEnd);
+    }
+    
 }
