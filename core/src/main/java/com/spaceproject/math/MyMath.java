@@ -45,6 +45,43 @@ public abstract class MyMath {
         return TEMP_VEC.set(dx, dy);
     }
     
+    /**
+     * Cast a ray from origin (screen space) in the given direction and return the distance to the
+     * point where the ray exits the viewport. Useful for drawing screen-space lines that always
+     * reach the edge of the screen, regardless of resolution.
+     * Returns fallbackLength if the ray never exits the viewport.
+     */
+    public static float rayToViewportEdge(float originX, float originY, float directionRad, float fallbackLength) {
+        float dirX = MathUtils.cos(directionRad);
+        float dirY = MathUtils.sin(directionRad);
+        float width = Gdx.graphics.getWidth();
+        float height = Gdx.graphics.getHeight();
+        boolean inside = originX >= 0 && originX <= width && originY >= 0 && originY <= height;
+        float tNear = Float.MAX_VALUE;
+        float tFar = 0f;
+        if (dirX > 1.0E-4f) {
+            float t = (width - originX) / dirX;
+            tNear = Math.min(tNear, t);
+            tFar = Math.max(tFar, t);
+        } else if (dirX < -1.0E-4f) {
+            float t = (0f - originX) / dirX;
+            tNear = Math.min(tNear, t);
+            tFar = Math.max(tFar, t);
+        }
+        if (dirY > 1.0E-4f) {
+            float t = (height - originY) / dirY;
+            tNear = Math.min(tNear, t);
+            tFar = Math.max(tFar, t);
+        } else if (dirY < -1.0E-4f) {
+            float t = (0f - originY) / dirY;
+            tNear = Math.min(tNear, t);
+            tFar = Math.max(tFar, t);
+        }
+        float tExit = inside ? tNear : tFar;
+        if (tExit <= 0f || tExit == Float.MAX_VALUE) return fallbackLength;
+        return tExit;
+    }
+    
     public static Vector2 logVec(Vector2 vec, float scale) {
         float length = (float) Math.log(vec.len()) * scale;
         return vector(vec.angleRad(), length);
