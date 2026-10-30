@@ -605,6 +605,9 @@ public class Box2DContactListener implements ContactListener {
         engine.addEntity(respawnEntity);
         ProjectileHitRenderSystem.hit(transform.pos.x, transform.pos.y, Color.RED);//todo: replace with explode particle effect
         Gdx.app.debug(Box2DContactListener.class.getSimpleName(), "create respawn(" + respawn.reason + ") marker: " + DebugUtil.objString(respawnEntity) + " for " + DebugUtil.objString(entity));
+        
+        engine.getSystem(ClearScreenSystem.class).setProcessing(false);
+        //engine.getSystem(SpaceParallaxSystem.class).setProcessing(false);
     }
 
 }
