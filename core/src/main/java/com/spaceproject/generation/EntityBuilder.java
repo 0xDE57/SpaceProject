@@ -192,7 +192,19 @@ public class EntityBuilder {
         entityCluster.add(mainEngine);
         entityCluster.add(leftEngine);
         entityCluster.add(rightEngine);
-
+        
+        boolean cornerTrails = true;
+        if (cornerTrails) {
+            Entity trailFrontLeft = createTrail(shipEntity, new Vector2(width / 2, height / 2));
+            Entity trailFrontRight = createTrail(shipEntity, new Vector2(width / 2, -height / 2));
+            Entity trailBackLeft = createTrail(shipEntity, new Vector2(-width / 2, height / 2));
+            Entity trailBackRight = createTrail(shipEntity, new Vector2(-width / 2, -height / 2));
+            entityCluster.add(trailFrontLeft);
+            entityCluster.add(trailFrontRight);
+            entityCluster.add(trailBackLeft);
+            entityCluster.add(trailBackRight);
+        }
+        
         return entityCluster;
     }
 
@@ -257,6 +269,27 @@ public class EntityBuilder {
         test.color = Color.GOLD;
         entity.add(test);
         */
+
+        return entity;
+    }
+
+    public static Entity createTrail(Entity parent, Vector2 offset) {
+        Entity entity = new Entity();
+
+        AttachedToComponent attached = new AttachedToComponent();
+        attached.parentEntity = parent;
+        entity.add(attached);
+
+        //position is resolved from parent at render time (see TrailRenderSystem)
+        TransformComponent transform = new TransformComponent();
+        transform.zOrder = RenderOrder.VEHICLES.getHierarchy();
+        entity.add(transform);
+
+        TrailComponent trail = new TrailComponent();
+        trail.offset = offset;//relative to parent body
+        trail.style = TrailComponent.Style.state;
+        trail.zOrder = 90;//below ship spline (100)
+        entity.add(trail);
 
         return entity;
     }

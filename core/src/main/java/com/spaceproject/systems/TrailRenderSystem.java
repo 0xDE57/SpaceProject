@@ -10,8 +10,10 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Disposable;
+import com.spaceproject.components.AttachedToComponent;
 import com.spaceproject.components.ControllableComponent;
 import com.spaceproject.components.HealthComponent;
 import com.spaceproject.components.HyperDriveComponent;
@@ -36,6 +38,7 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
     
     private final ShapeRenderer shape;
     private final Color tmpColor = new Color();
+    private final Vector2 tmpOffset = new Vector2();
     private int maxPathSize = 40;
     private float alpha = 1;
     private float animation;
@@ -116,7 +119,10 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
         }
 
         TransformComponent transform = Mappers.transform.get(entity);
-        PhysicsComponent physics = Mappers.physics.get(entity);
+        //if attached to a parent, resolve position and state from the parent entity
+        AttachedToComponent attachedTo = Mappers.attachedTo.get(entity);
+        Entity stateEntity = (attachedTo != null) ? attachedTo.parentEntity : entity;
+        PhysicsComponent physics = Mappers.physics.get(stateEntity);
 
         //todo: eliminate these magic numbers
         //off, on, boost, hyper -> 0, 1, 2, 3
@@ -129,7 +135,7 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
         
                 if (trail.style == TrailComponent.Style.state) {
                     //set state
-                    ControllableComponent control = Mappers.controllable.get(entity);
+                    ControllableComponent control = Mappers.controllable.get(stateEntity);
                     if (control != null) {
                         if (control.moveForward || control.moveBack || control.moveLeft || control.moveRight || control.boost) {
                             state = 1;
@@ -142,7 +148,7 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
                         }
                     }
             
-                    ShieldComponent shield = Mappers.shield.get(entity);
+                    ShieldComponent shield = Mappers.shield.get(stateEntity);
                     if (shield != null) {
                         if (shield.state == ShieldComponent.State.on) {
                             state = -2;
@@ -161,14 +167,14 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
                     if (!physics.body.isActive()) {
                         state = 3;
                 
-                        HyperDriveComponent hyper = Mappers.hyper.get(entity);
+                        HyperDriveComponent hyper = Mappers.hyper.get(stateEntity);
                         velocity = hyper.speed * hyper.speed;
                     }
                 }
             }
 
             //show hurt
-            HealthComponent health = Mappers.health.get(entity);
+            HealthComponent health = Mappers.health.get(stateEntity);
             if (health != null) {
                 long hurtTime = 1000;
                 if ((GameScreen.getGameTimeCurrent() - health.lastHitTime) < hurtTime) {
@@ -177,7 +183,17 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
             }
         }
         
-        trail.path[trail.indexHead].set(transform.pos.x, transform.pos.y, velocity);
+        //set head position, relative to parent when attached
+        if (attachedTo != null) {
+            TransformComponent parentTransform = Mappers.transform.get(attachedTo.parentEntity);
+            //offset is relative to parent body, so rotate by parent rotation before applying
+            tmpOffset.set(trail.offset != null ? trail.offset : Vector2.Zero).rotateRad(parentTransform.rotation);
+            trail.path[trail.indexHead].set(parentTransform.pos.x + tmpOffset.x,
+                    parentTransform.pos.y + tmpOffset.y,
+                    velocity);
+        } else {
+            trail.path[trail.indexHead].set(transform.pos.x, transform.pos.y, velocity);
+        }
         if (trail.style == TrailComponent.Style.state) {
             trail.state[trail.indexHead] = state;
         }
