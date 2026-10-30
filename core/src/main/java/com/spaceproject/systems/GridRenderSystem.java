@@ -58,6 +58,7 @@ public class GridRenderSystem extends EntitySystem implements Disposable {
     private final Color hintColorA = Color.GREEN.cpy();
 
     private final Color cacheColor = new Color();
+    private final Color cacheColor2 = new Color();
     private final Vector2 cacheVec = new Vector2();
 
     private ImmutableArray<Entity> players;
@@ -322,15 +323,18 @@ public class GridRenderSystem extends EntitySystem implements Disposable {
 
         //draw movement direction for navigation assistance, line up vector with target destination
         Body body = Mappers.physics.get(entity).body;
-        Vector2 facing = MyMath.vector(body.getAngle(), 500000);
         Vector2 originalPosition = Mappers.transform.get(entity).pos;
         playerPos.set(originalPosition, 0);
         Vector3 pos = cam.project(playerPos);
+        //project the facing line to the edge of the viewport, so it always reaches the screen edge
+        float facingDist = MyMath.rayToViewportEdge(pos.x, pos.y, body.getAngle(), 1000);
+        Vector2 facing = MyMath.vector(body.getAngle(), facingDist).add(pos.x, pos.y);
 
         float width = 0.5f;
         cacheColor.set(Color.WHITE);
         cacheColor.a = alpha;
-        shape.rectLine(pos.x, pos.y, facing.x, facing.y, width, cacheColor, cacheColor);
+        cacheColor2.set(cacheColor).a = 0;
+        shape.rectLine(pos.x, pos.y, facing.x, facing.y, width, cacheColor2, cacheColor);
         CannonComponent cannon = Mappers.cannon.get(entity);
         if (cannon != null) {
             int hitTime = 200;
@@ -374,10 +378,14 @@ public class GridRenderSystem extends EntitySystem implements Disposable {
             cacheColor.set(Color.RED);
         }
         cacheColor.a = alpha;
+        cacheColor2.set(cacheColor).a = 0;
 
         //draw velocity vector
-        cacheVec.set(MyMath.vector(body.getLinearVelocity().angleRad(), 500000));
-        shape.rectLine(pos.x, pos.y, cacheVec.x, cacheVec.y, width, cacheColor, cacheColor);
+        //project the velocity line to the edge of the viewport, so it always reaches the screen edge
+        float velocityAngle = body.getLinearVelocity().angleRad();
+        float velocityDist = MyMath.rayToViewportEdge(pos.x, pos.y, velocityAngle, 1000);
+        cacheVec.set(MyMath.vector(velocityAngle, velocityDist)).add(pos.x, pos.y);
+        shape.rectLine(pos.x, pos.y, cacheVec.x, cacheVec.y, width, cacheColor2, cacheColor);
         
         float velocity = body.getLinearVelocity().len();
         //boolean isMaxVelocity = MathUtils.isEqual(velocity, Box2DPhysicsSystem.getVelocityLimit(), 0.5f);
