@@ -102,6 +102,8 @@ public class PlayerSpawnSystem extends EntitySystem {
                         Entity player = spawnPlayerSpaceStation();
                         ECSUtil.transferComponent(respawnEntity, player, StatsComponent.class);
                         player.getComponent(CargoComponent.class).credits = respawn.saveCredits;//hack!
+                        
+                        getEngine().getSystem(ClearScreenSystem.class).setProcessing(true); //hack!
                         break;
                     //default: Gdx.app.debug(getClass().getSimpleName(), respawn.spawn.name());
                 }
