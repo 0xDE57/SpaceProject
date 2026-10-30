@@ -61,6 +61,14 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
             for (int v = 0; v < maxPathSize; v++) {
                 trail.path[v] = new Vector3();
             }
+            switch (trail.style) {
+                case stateRotate:
+                    trail.pathEnd = new Vector2[maxPathSize];
+                    for (int v = 0; v < maxPathSize; v++) {
+                        trail.pathEnd[v] = new Vector2();
+                    }
+                    break;
+            }
             trail.state = new byte[maxPathSize];
         }
         if (trail.style == null) {
@@ -108,6 +116,7 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
             case velocity: renderVelocityPath(trail); break;
             case state: renderStatePath(trail); break;
             case solid: renderDefaultPath(trail); break;
+            case stateRotate: renderStateRotatePath(trail); break;
         }
     }
     
@@ -128,48 +137,47 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
         //off, on, boost, hyper -> 0, 1, 2, 3
         float velocity = 0;
         byte state = 0;
-        if (trail.style == TrailComponent.Style.state) {
+        boolean stateStyle = trail.style == TrailComponent.Style.state
+                || trail.style == TrailComponent.Style.stateRotate;
+        if (stateStyle) {
             if (physics != null) {
                 //set velocity
                 velocity = physics.body.getLinearVelocity().len2();
-        
-                if (trail.style == TrailComponent.Style.state) {
-                    //set state
-                    ControllableComponent control = Mappers.controllable.get(stateEntity);
-                    if (control != null) {
-                        if (control.moveForward || control.moveBack || control.moveLeft || control.moveRight || control.boost) {
-                            state = 1;
-                            if (control.boost) {
-                                state = 2;
-                            }
-                        }
-                        if (!control.activelyControlled) {
-                            state = -4;
+
+                //set state
+                ControllableComponent control = Mappers.controllable.get(stateEntity);
+                if (control != null) {
+                    if (control.moveForward || control.moveBack || control.moveLeft || control.moveRight || control.boost) {
+                        state = 1;
+                        if (control.boost) {
+                            state = 2;
                         }
                     }
-            
-                    ShieldComponent shield = Mappers.shield.get(stateEntity);
-                    if (shield != null) {
-                        if (shield.state == ShieldComponent.State.on) {
-                            state = -2;
-                        } else {
-                            //charge discharge
-                            //in out
-                            //state =- 4;?
-                        }
-                
-                        if ((GameScreen.getGameTimeCurrent() - shield.lastHit) < 500) {
-                            state = -3;
-                        }
-                
+                    if (!control.activelyControlled) {
+                        state = -4;
                     }
-            
-                    if (!physics.body.isActive()) {
-                        state = 3;
-                
-                        HyperDriveComponent hyper = Mappers.hyper.get(stateEntity);
-                        velocity = hyper.speed * hyper.speed;
+                }
+
+                ShieldComponent shield = Mappers.shield.get(stateEntity);
+                if (shield != null) {
+                    if (shield.state == ShieldComponent.State.on) {
+                        state = -2;
+                    } else {
+                        //charge discharge
+                        //in out
+                        //state =- 4;?
                     }
+
+                    if ((GameScreen.getGameTimeCurrent() - shield.lastHit) < 500) {
+                        state = -3;
+                    }
+                }
+
+                if (!physics.body.isActive()) {
+                    state = 3;
+
+                    HyperDriveComponent hyper = Mappers.hyper.get(stateEntity);
+                    velocity = hyper.speed * hyper.speed;
                 }
             }
 
@@ -194,10 +202,20 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
         } else {
             trail.path[trail.indexHead].set(transform.pos.x, transform.pos.y, velocity);
         }
-        if (trail.style == TrailComponent.Style.state) {
+        if (stateStyle) {
             trail.state[trail.indexHead] = state;
         }
-        
+
+        //stateRotate: set endpoint as the path point + endOffset rotated by current rotation
+        if (trail.style == TrailComponent.Style.stateRotate && trail.endOffset != null) {
+            float rotation = (attachedTo != null)
+                    ? Mappers.transform.get(attachedTo.parentEntity).rotation
+                    : transform.rotation;
+            tmpOffset.set(trail.endOffset).rotateRad(rotation);
+            trail.pathEnd[trail.indexHead].set(trail.path[trail.indexHead].x + tmpOffset.x,
+                    trail.path[trail.indexHead].y + tmpOffset.y);
+        }
+
         //roll index
         trail.indexHead++;
         if (trail.indexHead >= trail.path.length) {
@@ -276,10 +294,43 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
                 shape.rectLine(p1.x, p1.y, p2.x, p2.y, (float) (0.5f * Math.sin(animation)), Color.MAGENTA, Color.CYAN);
                 shape.rectLine(p1.x, p1.y, p2.x, p2.y, (float) (0.5f * Math.sin(animation * 3.14)), Color.GOLD, Color.GREEN);
             }
-            
+
         }
     }
-    
+
+    public void renderStateRotatePath(TrailComponent spline) {
+        int length = spline.path.length;
+        int newestIndex = (spline.indexHead - 1 + length) % length;
+        for (int i = 0; i < length; i++) {
+            if (i == newestIndex) {
+                continue;
+            }
+
+            Vector3 p1 = spline.path[i];
+            Vector2 p2 = spline.pathEnd[i];
+
+            switch (spline.state[i]) {
+                case -4: continue; //don't render
+                case -3: color.set(Color.GREEN); break; //or color of asteroid hit?
+                case -2: color.set(Color.BLUE); break;
+                case -1: color.set(Color.RED); break;
+                case 1: color.set(Color.GOLD); break;
+                case 2: color.set(Color.CYAN); break;
+                case 3: color.set(Color.WHITE); break;
+                default: color.set(Color.GRAY);
+            }
+
+            // Calculate alpha based on "age"
+            // age 0 = newest, age (length-1) = oldest
+            int age = (newestIndex - i + length) % length;
+            float alpha = 1.0f - ((float) age / length);
+            color.a = alpha;
+
+            //instead of drawing to the next path point, draw to the rotated offset endpoint
+            shape.line(p1.x, p1.y, p2.x, p2.y, color, color);
+        }
+    }
+
     public void renderDefaultPath(TrailComponent spline) {
         //todo: bug with tail index not properly rendered
         boolean debugDrawHeadTail = false;

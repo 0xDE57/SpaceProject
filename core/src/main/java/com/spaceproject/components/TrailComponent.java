@@ -11,8 +11,14 @@ public class TrailComponent implements Component {
     
     //xy = position, z = velocity
     public Vector3[] path;
-    
+
+    //endpoint for each path point, eg: rotated endOffset for stateRotate
+    public Vector2[] pathEnd;
+
     public Vector2 offset;
+
+    //offset from each path point to its endpoint, rotated by current rotation (stateRotate)
+    public Vector2 endOffset;
     
     // states: shield protect,shield on, damage, off, on, boost, hyper -> -3, -2, -1, 0, 1, 2, 3
     public byte[] state;
@@ -25,7 +31,7 @@ public class TrailComponent implements Component {
     public Style style;
 
     public enum Style {
-        norender, solid, velocity, state, rainbow
+        norender, solid, velocity, state, stateRotate, rainbow
     }
     
     public Color color;

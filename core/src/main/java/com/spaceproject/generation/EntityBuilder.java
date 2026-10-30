@@ -176,6 +176,14 @@ public class EntityBuilder {
         spline.style = TrailComponent.Style.state;
         shipEntity.add(spline);
 
+        //rotated trail: state variation that draws from each path point to the rotated endOffset
+        //note: must be its own entity, Ashley replaces (not stacks) duplicate component types
+        //anchored at the center, same offset as main engine: the particle offset
+        //(0, height + 0.2f) is just a magnitude (its direction is overwritten to point back,
+        //rotation + 180), so the engine's position relative to body is (-(height + 0.2f), 0)
+        Entity rotateTrail = createTrail(shipEntity, new Vector2(), TrailComponent.Style.stateRotate,
+                new Vector2(-(height + 0.2f), 0));
+
         //cargo
         CargoComponent cargo = new CargoComponent();
         shipEntity.add(cargo);
@@ -192,8 +200,9 @@ public class EntityBuilder {
         entityCluster.add(mainEngine);
         entityCluster.add(leftEngine);
         entityCluster.add(rightEngine);
-        
-        boolean cornerTrails = true;
+        entityCluster.add(rotateTrail);
+
+        boolean cornerTrails = false;
         if (cornerTrails) {
             Entity trailFrontLeft = createTrail(shipEntity, new Vector2(width / 2, height / 2));
             Entity trailFrontRight = createTrail(shipEntity, new Vector2(width / 2, -height / 2));
@@ -204,6 +213,9 @@ public class EntityBuilder {
             entityCluster.add(trailBackLeft);
             entityCluster.add(trailBackRight);
         }
+        
+        Entity endTrail = createTrail(shipEntity, new Vector2( -height - 0.2f, 0));
+        entityCluster.add(endTrail);
         
         return entityCluster;
     }
@@ -274,6 +286,10 @@ public class EntityBuilder {
     }
 
     public static Entity createTrail(Entity parent, Vector2 offset) {
+        return createTrail(parent, offset, TrailComponent.Style.state, null);
+    }
+
+    public static Entity createTrail(Entity parent, Vector2 offset, TrailComponent.Style style, Vector2 endOffset) {
         Entity entity = new Entity();
 
         AttachedToComponent attached = new AttachedToComponent();
@@ -287,8 +303,9 @@ public class EntityBuilder {
 
         TrailComponent trail = new TrailComponent();
         trail.offset = offset;//relative to parent body
-        trail.style = TrailComponent.Style.state;
-        trail.zOrder = 90;//below ship spline (100)
+        trail.endOffset = endOffset;//endpoint relative to path point, rotated by parent rotation (stateRotate)
+        trail.style = style;
+        trail.zOrder = (style == TrailComponent.Style.stateRotate) ? 95 : 90;//below ship spline (100)
         entity.add(trail);
 
         return entity;
