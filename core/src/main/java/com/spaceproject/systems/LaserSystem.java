@@ -40,7 +40,20 @@ public class LaserSystem extends IteratingSystem implements Disposable {
 
     boolean drawNormal = false;
     DebugConfig debug = SpaceProject.configManager.getConfig(DebugConfig.class);
-
+    
+    //beam cache
+    final Color ratio = new Color();
+    final Color endColor = new Color();
+    final Color startFade = new Color();
+    final Color coreStart = new Color();
+    final Color coreEnd = new Color();
+    final Color refractionEnd = new Color();
+    final Color refractionCore = new Color();
+    final Color internalReflectionEnd = new Color();
+    final Color internalReflectionCore = new Color();
+    final Vector2 innerNormal = new Vector2();
+    float distanceTraveled;
+    
     public LaserSystem() {
         super(Family.all(LaserComponent.class, PhysicsComponent.class).get());
         shape = new ShapeRenderer();
@@ -88,19 +101,7 @@ public class LaserSystem extends IteratingSystem implements Disposable {
         distanceTraveled = 0;
         castLaser(entity, laser, body.getPosition(), incidentRay, laser.color.cpy(), laser.range, maxReflections, deltaTime);
     }
-    final Color ratio = new Color();
-    final Color endColor = new Color();
-    final Color startFade = new Color();
-    final Color coreStart = new Color();
-    final Color coreEnd = new Color();
-    final Color refractionEnd = new Color();
-    final Color refractionCore = new Color();
-    final Color internalReflectionEnd = new Color();
-    final Color internalReflectionCore = new Color();
-    final Vector2 innerNormal = new Vector2();
-    //distance already traveled along the beam, used to fade segments relative to the full laser range
-    float distanceTraveled;
-    //Vector2 tempvec = new Vector2();
+    
     private void castLaser(Entity entity, LaserComponent laser, Vector2 p1, Vector2 p2, Color color, float length, int reflections, float deltaTime) {
         if (reflections <= 0) return;
         if (incidentVector.set(p2).sub(p1).isZero()) return;
@@ -129,17 +130,13 @@ public class LaserSystem extends IteratingSystem implements Disposable {
         float endFraction = (distanceTraveled + distanceToHit) / laser.range;
 
         endColor.set(Color.CLEAR).lerp(color, MathUtils.random()*0.25f);
-        startFade.set(color).lerp(endColor, startFraction - MathUtils.random()*0.15f);
-        ratio.set(color).lerp(endColor, endFraction - MathUtils.random()*0.15f);
-        //shape.rectLine(p1.x, p1.y, p2.x, p2.y, 0.2f, color, ratio);
-        //shape.rectLine(p1.x, p1.y, p2.x, p2.y, 0.1f, Color.WHITE, Color.WHITE);
-        //shape.rectLine(p1.x, p1.y, p2.x, p2.y, length, Color.RED, Color.PURPLE);
-        //rectLineFilled(shape, p1.x, p1.y, p2.x, p2.y, 0.2f, Color.RED, Color.PURPLE);
-        //rectLineFilled(shape, p1.x, p1.y, p2.x, p2.y, 0.2f, Color.WHITE, Color.BLACK);
-        coreStart.set(Color.WHITE).lerp(Color.CLEAR, startFraction - MathUtils.random()*0.15f);
-        coreEnd.set(Color.WHITE).lerp(Color.CLEAR, endFraction - MathUtils.random()*0.15f);
+        float rng = MathUtils.random() * 0.15f;
+        startFade.set(color).lerp(endColor, startFraction - rng);
+        ratio.set(color).lerp(endColor, endFraction - rng);
+        coreStart.set(Color.WHITE).lerp(Color.CLEAR, startFraction - rng);
+        coreEnd.set(Color.WHITE).lerp(Color.CLEAR, endFraction - rng);
         shape.rectLine(p1.x, p1.y, p2.x, p2.y, 0.1f, coreStart, coreEnd);
-        float thickness = 0.3f + MathUtils.random() * 0.15f;
+        float thickness = 0.3f + rng;
         BeamShapeRender.rectLineBeam(shape, p1, p2, thickness, startFade, ratio, color, Color.CLEAR);
         
 
@@ -210,8 +207,8 @@ public class LaserSystem extends IteratingSystem implements Disposable {
                             //refraction continues from the main beam's end fade and keeps fading relative to the full range
                             float refractedDistance = p2.dst(refractedEndPoint);
                             float refractedFraction = (distanceTraveled + distanceToHit + refractedDistance) / laser.range;
-                            refractionEnd.set(color).lerp(endColor, refractedFraction - MathUtils.random()*0.15f);
-                            refractionCore.set(Color.WHITE).lerp(Color.CLEAR, refractedFraction - MathUtils.random()*0.15f);
+                            refractionEnd.set(color).lerp(endColor, refractedFraction - rng);
+                            refractionCore.set(Color.WHITE).lerp(Color.CLEAR, refractedFraction - rng);
                             shape.rectLine(p2.x, p2.y, refractedEndPoint.x, refractedEndPoint.y, 0.1f, coreEnd, refractionCore);
                             BeamShapeRender.rectLineBeam(shape, p2, refractedEndPoint, thickness, ratio, refractionEnd, color, Color.CLEAR);
                             
@@ -222,8 +219,8 @@ public class LaserSystem extends IteratingSystem implements Disposable {
                             
                             //internal reflection continues from the refraction's end fade (may clamp fully faded if it exceeds the range)
                             float internalReflectionFraction = (distanceTraveled + distanceToHit + refractedDistance + remainingDistance) / laser.range;
-                            internalReflectionEnd.set(color).lerp(endColor, internalReflectionFraction - MathUtils.random()*0.15f);
-                            internalReflectionCore.set(Color.WHITE).lerp(Color.CLEAR, internalReflectionFraction - MathUtils.random()*0.15f);
+                            internalReflectionEnd.set(color).lerp(endColor, internalReflectionFraction - rng);
+                            internalReflectionCore.set(Color.WHITE).lerp(Color.CLEAR, internalReflectionFraction - rng);
                             shape.rectLine(refractedEndPoint.x, refractedEndPoint.y, internalReflection.x, internalReflection.y, 0.1f, refractionCore, internalReflectionCore);
                             BeamShapeRender.rectLineBeam(shape, refractedEndPoint, internalReflection, thickness, refractionEnd, internalReflectionEnd, color, Color.CLEAR);
                         }
@@ -359,54 +356,6 @@ public class LaserSystem extends IteratingSystem implements Disposable {
         infoString.append("[Raycasts]:         ").append(rayCount);
         infoString.append("\n[Ray callbacks]:    ").append(callbackCount);
         return infoString.toString();
-    }
-    
-    /**
-     * Draws a filled "line" between p1 and p2 by creating a rotated rectangle.
-     * The rectangle's length runs from p1 to p2 and its thickness is `thickness`.
-     * colorStart will be applied to the vertices on one side of the thickness
-     * and colorEnd to the opposite side, causing the GPU to interpolate across
-     * the thickness (perpendicular to the line).
-     *
-     * Note: call sr.begin(ShapeRenderer.ShapeType.Filled) before calling this.
-     */
-    public static void rectLineFilled(ShapeRenderer sr, float x1, float y1, float x2, float y2, float thickness, Color colorStart, Color colorEnd) {
-        // length and angle
-        float dx = x2 - x1;
-        float dy = y2 - y1;
-        float length = (float)Math.sqrt(dx * dx + dy * dy);
-        
-        // handle degenerate (zero-length) case: draw square centered at point
-        if (length <= 1e-6f) {
-            float half = thickness * 0.5f;
-            // Use rect with no rotation, colors top/bottom to get gradient across thickness
-            sr.rect(x1 - half, y1 - half, half, half, thickness, thickness, 1f, 1f, 0f,
-                colorStart, colorStart, colorEnd, colorEnd);
-            return;
-        }
-        
-        float angleDeg = (float)Math.toDegrees(Math.atan2(dy, dx));
-        
-        // center point
-        float cx = (x1 + x2) * 0.5f;
-        float cy = (y1 + y2) * 0.5f;
-        
-        // lower-left corner of rectangle before rotation: center - (length/2, thickness/2)
-        float rectX = cx - length * 0.5f;
-        float rectY = cy - thickness * 0.5f;
-        
-        // rotate around center
-        float originX = length * 0.5f;
-        float originY = thickness * 0.5f;
-        
-        // Assign same color to both bottom vertices (colorStart) and same color to both top vertices (colorEnd)
-        // rect parameters: x,y, originX, originY, width, height, scaleX, scaleY, degrees, colBL, colBR, colTR, colTL
-        sr.rect(rectX, rectY, originX, originY, length, thickness, 1f, 1f, angleDeg, colorStart, colorStart, colorEnd, colorEnd);
-    }
-    
-    /** Convenience overload using Vector2 points. */
-    public static void rectLineFilled(ShapeRenderer sr, Vector2 p1, Vector2 p2, float thickness, Color colorStart, Color colorEnd) {
-        rectLineFilled(sr, p1.x, p1.y, p2.x, p2.y, thickness, colorStart, colorEnd);
     }
     
 }
