@@ -171,10 +171,11 @@ public class EntityBuilder {
         shipEntity.add(particle);
 
         //spline
+        /*
         TrailComponent spline = new TrailComponent();
         spline.zOrder = 100;//should be on top of others
         spline.style = TrailComponent.Style.state;
-        //shipEntity.add(spline);
+        shipEntity.add(spline);*/
 
         //rotated trail: state variation that draws from each path point to the rotated endOffset
         //note: must be its own entity, Ashley replaces (not stacks) duplicate component types
@@ -214,7 +215,7 @@ public class EntityBuilder {
             entityCluster.add(trailBackRight);
         }
         
-        Entity endTrail = createTrail(shipEntity, new Vector2( -height - 0.2f, 0));
+        //Entity endTrail = createTrail(shipEntity, new Vector2( -height - 0.2f, 0));
         //entityCluster.add(endTrail);
         
         return entityCluster;

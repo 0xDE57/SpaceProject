@@ -27,7 +27,7 @@ import com.spaceproject.utility.SimpleTimer;
 
 import java.util.Comparator;
 
-public class TrailRenderSystem extends SortedIteratingSystem implements EntityListener, Disposable {
+public class TrailShapeRenderSystem extends SortedIteratingSystem implements EntityListener, Disposable {
     
     private static class ZComparator implements Comparator<Entity> {
         @Override
@@ -52,7 +52,7 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
     private float animation;
     private float animSpeed = 2f;
 
-    public TrailRenderSystem() {
+    public TrailShapeRenderSystem() {
         super(Family.all(TrailComponent.class, TransformComponent.class).get(), new ZComparator());
         shape = new ShapeRenderer();
     }

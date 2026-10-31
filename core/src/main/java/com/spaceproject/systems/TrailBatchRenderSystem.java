@@ -1,0 +1,509 @@
+package com.spaceproject.systems;
+
+
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.EntityListener;
+import com.badlogic.ashley.core.Family;
+import com.badlogic.ashley.systems.SortedIteratingSystem;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.Disposable;
+import com.spaceproject.components.AttachedToComponent;
+import com.spaceproject.components.ControllableComponent;
+import com.spaceproject.components.HealthComponent;
+import com.spaceproject.components.HyperDriveComponent;
+import com.spaceproject.components.PhysicsComponent;
+import com.spaceproject.components.ShieldComponent;
+import com.spaceproject.components.TrailComponent;
+import com.spaceproject.components.TransformComponent;
+import com.spaceproject.screens.GameScreen;
+import com.spaceproject.utility.Mappers;
+import com.spaceproject.utility.SimpleTimer;
+import space.earlygrey.shapedrawer.JoinType;
+import space.earlygrey.shapedrawer.ShapeDrawer;
+
+import java.util.Comparator;
+
+public class TrailBatchRenderSystem extends SortedIteratingSystem implements EntityListener, Disposable {
+    
+    private static class ZComparator implements Comparator<Entity> {
+        @Override
+        public int compare(Entity entityA, Entity entityB) {
+            return (int)Math.signum(Mappers.trail.get(entityA).zOrder - Mappers.trail.get(entityB).zOrder);
+        }
+    }
+    
+    private final ShapeDrawer shape;
+    private final Batch batch;
+    private final Texture texture;
+    private final Color tmpColor = new Color();
+    private final Vector2 tmpOffset = new Vector2();
+    //scratch colors for per-corner (per-vertex) colors of the filled trail (stateRotateFill)
+    private final Color fillA = new Color();
+    private final Color fillB = new Color();
+    private final Color fillC = new Color();
+    private final Color fillD = new Color();
+    //scratch vertices for slanted rectangle outlines (rectLine)
+    private final float[] rectVerts = new float[8];
+    //todo: eliminate these magic numbers
+    //how much the endpoint corners of stateRotateFill fade relative to the path corners (taper into the engine offset)
+    private static final float endFade = 0.25f;
+    private int maxPathSize = 40;
+    private float alpha = 1;
+    private float animation;
+    private float animSpeed = 2f;
+
+    public TrailBatchRenderSystem() {
+        super(Family.all(TrailComponent.class, TransformComponent.class).get(), new ZComparator());
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGB888);
+        pixmap.setColor(Color.WHITE);
+        pixmap.drawPixel(0, 0);
+        texture = new Texture(pixmap);
+        pixmap.dispose();
+        TextureRegion region = new TextureRegion(texture, 0, 0, 1, 1);
+        batch = new PolygonSpriteBatch();
+        shape = new ShapeDrawer(batch, region);
+    }
+
+    @Override
+    public void entityAdded(Entity entity) {
+        super.entityAdded(entity);
+        TrailComponent trail = Mappers.trail.get(entity);
+
+        //initialize
+        if (trail.path == null) {
+            //todo: cache. use pooled vectors
+            trail.path = new Vector3[maxPathSize];
+            for (int v = 0; v < maxPathSize; v++) {
+                trail.path[v] = new Vector3();
+            }
+            switch (trail.style) {
+                case stateRotate:
+                case stateRotateFill:
+                    trail.pathEnd = new Vector2[maxPathSize];
+                    for (int v = 0; v < maxPathSize; v++) {
+                        trail.pathEnd[v] = new Vector2();
+                    }
+                    break;
+            }
+            trail.state = new byte[maxPathSize];
+        }
+        if (trail.style == null) {
+            trail.style = TrailComponent.Style.norender;
+        }
+        if (trail.updateTimer == null) {
+            trail.updateTimer = new SimpleTimer(10);
+            trail.updateTimer.setCanDoEvent();
+        }
+    }
+
+    @Override
+    public void update(float deltaTime) {
+        //warning: system coupling -> todo: use signals?
+        HUDSystem hudSystem = getEngine().getSystem(HUDSystem.class);
+        if (hudSystem != null && !hudSystem.isDraw()) {
+            return;
+        }
+    
+        alpha = MathUtils.clamp((GameScreen.cam.zoom / 100), 0, 1);
+        if (MathUtils.isEqual(alpha, 0)) return;
+        
+        animation += animSpeed * deltaTime;
+        
+        //enable transparency
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        
+        batch.setProjectionMatrix(GameScreen.cam.combined);
+        
+        //ShapeDrawer draws Line shapes and Filled shapes in the same batch, so there is
+        //no need to choose between ShapeType.Line and ShapeType.Filled
+        batch.begin();
+        super.update(deltaTime);
+        batch.end();
+        
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+    
+    @Override
+    protected void processEntity(Entity entity, float deltaTime) {
+        TrailComponent trail = Mappers.trail.get(entity);
+
+        updateTail(trail, entity);
+
+        switch (trail.style) {
+            case velocity: renderVelocityPath(trail); break;
+            case state: renderStatePath(trail); break;
+            case solid: renderDefaultPath(trail); break;
+            case stateRotate: renderStateRotatePath(trail); break;
+            case stateRotateFill: renderStateRotateFillPath(trail); break;
+        }
+    }
+    
+    // these are more like paths than splines, but see also:
+    // https://libgdx.com/wiki/math-utils/path-interface-and-splines
+    private void updateTail(TrailComponent trail, Entity entity) {
+        if (!trail.updateTimer.tryEvent()) {
+            return;
+        }
+
+        TransformComponent transform = Mappers.transform.get(entity);
+        //if attached to a parent, resolve position and state from the parent entity
+        AttachedToComponent attachedTo = Mappers.attachedTo.get(entity);
+        Entity stateEntity = (attachedTo != null) ? attachedTo.parentEntity : entity;
+        PhysicsComponent physics = Mappers.physics.get(stateEntity);
+
+        //todo: eliminate these magic numbers
+        //off, on, boost, hyper -> 0, 1, 2, 3
+        float velocity = 0;
+        byte state = 0;
+        boolean stateStyle = trail.style == TrailComponent.Style.state
+                || trail.style == TrailComponent.Style.stateRotate
+                || trail.style == TrailComponent.Style.stateRotateFill;
+        if (stateStyle) {
+            if (physics != null) {
+                //set velocity
+                velocity = physics.body.getLinearVelocity().len2();
+
+                //set state
+                ControllableComponent control = Mappers.controllable.get(stateEntity);
+                if (control != null) {
+                    if (control.moveForward || control.moveBack || control.moveLeft || control.moveRight || control.boost) {
+                        state = 1;
+                        if (control.boost) {
+                            state = 2;
+                        }
+                    }
+                    if (!control.activelyControlled) {
+                        state = -4;
+                    }
+                }
+
+                ShieldComponent shield = Mappers.shield.get(stateEntity);
+                if (shield != null) {
+                    if (shield.state == ShieldComponent.State.on) {
+                        state = -2;
+                    } else {
+                        //charge discharge
+                        //in out
+                        //state =- 4;?
+                    }
+
+                    if ((GameScreen.getGameTimeCurrent() - shield.lastHit) < 500) {
+                        state = -3;
+                    }
+                }
+
+                if (!physics.body.isActive()) {
+                    state = 3;
+
+                    HyperDriveComponent hyper = Mappers.hyper.get(stateEntity);
+                    velocity = hyper.speed * hyper.speed;
+                }
+            }
+
+            //show hurt
+            HealthComponent health = Mappers.health.get(stateEntity);
+            if (health != null) {
+                long hurtTime = 1000;
+                if ((GameScreen.getGameTimeCurrent() - health.lastHitTime) < hurtTime) {
+                    state = -1;
+                }
+            }
+        }
+        
+        //set head position, relative to parent when attached
+        if (attachedTo != null) {
+            TransformComponent parentTransform = Mappers.transform.get(attachedTo.parentEntity);
+            //offset is relative to parent body, so rotate by parent rotation before applying
+            tmpOffset.set(trail.offset != null ? trail.offset : Vector2.Zero).rotateRad(parentTransform.rotation);
+            trail.path[trail.indexHead].set(parentTransform.pos.x + tmpOffset.x,
+                    parentTransform.pos.y + tmpOffset.y,
+                    velocity);
+        } else {
+            trail.path[trail.indexHead].set(transform.pos.x, transform.pos.y, velocity);
+        }
+        if (stateStyle) {
+            trail.state[trail.indexHead] = state;
+        }
+
+        //stateRotate: set endpoint as the path point + endOffset rotated by current rotation
+        if ((trail.style == TrailComponent.Style.stateRotate
+                || trail.style == TrailComponent.Style.stateRotateFill) && trail.endOffset != null) {
+            float rotation = (attachedTo != null)
+                    ? Mappers.transform.get(attachedTo.parentEntity).rotation
+                    : transform.rotation;
+            tmpOffset.set(trail.endOffset).rotateRad(rotation);
+            trail.pathEnd[trail.indexHead].set(trail.path[trail.indexHead].x + tmpOffset.x,
+                    trail.path[trail.indexHead].y + tmpOffset.y);
+        }
+
+        //roll index
+        trail.indexHead++;
+        if (trail.indexHead >= trail.path.length) {
+            trail.indexHead = 0;
+        }
+    }
+    
+    public void renderVelocityPath(TrailComponent spline) {
+        //todo: bug with tail index not properly rendered
+        boolean debugDrawHeadTail = false;
+    
+        //set default color
+        if (spline.color == null) {
+            spline.color = Color.MAGENTA;
+        }
+        
+        for (int i = 0; i < spline.path.length-1; i++) {
+            Vector3 p = spline.path[i];
+            
+            int indexWrap = (i + 1) % spline.path.length;
+            Vector3 p2 = spline.path[indexWrap];
+            
+            // don't draw head to tail
+            if (indexWrap != spline.indexHead) {
+                //z = linearVelocity [0 - max box2d] then hyperdrive velocity
+                float velocity = p.z / Box2DPhysicsSystem.getVelocityLimit2();
+                tmpColor.set(Color.BLACK.cpy().lerp(spline.color, velocity));
+                tmpColor.a = alpha;
+                if (velocity > 1.01f) {
+                    //hyperdrive travel
+                    tmpColor.set(1, 1, 1, 1);
+                }
+                shape.line(p.x, p.y, p2.x, p2.y, tmpColor, tmpColor);
+            } else {
+                //debug draw head to tail
+                if (debugDrawHeadTail) {
+                    shape.line(p.x, p.y, p2.x, p2.y, Color.RED, Color.WHITE);
+                }
+            }
+        }
+    }
+
+    Color color = new Color();
+    public void renderStatePath(TrailComponent spline) {
+        int length = spline.path.length;
+        int newestIndex = (spline.indexHead - 1 + length) % length;
+        for (int i = 0; i < length; i++) {
+            if (i == newestIndex) {
+                continue;
+            }
+            
+            int next = (i + 1) % length;
+            Vector3 p1 = spline.path[i];
+            Vector3 p2 = spline.path[next];
+            
+            switch (spline.state[i]) {
+                case -4: continue; //don't render
+                case -3: color.set(Color.GREEN); break; //or color of asteroid hit?
+                case -2: color.set(Color.BLUE); break;
+                case -1: color.set(Color.RED); break;
+                case 1: color.set(Color.GOLD); break;
+                case 2: color.set(Color.CYAN); break;
+                case 3: color.set(Color.WHITE); break;
+                default: color.set(Color.GRAY);
+            }
+            
+            // Calculate alpha based on "age"
+            // age 0 = newest, age (length-1) = oldest
+            int age = (newestIndex - i + length) % length;
+            float alpha = 1.0f - ((float) age / length);
+            color.a = alpha;
+            
+            shape.line(p1.x, p1.y, p2.x, p2.y, color, color);
+            if (spline.state[i] == 3) {
+                rectLine(p1.x, p1.y, p2.x, p2.y, (float) (0.5f * Math.sin(animation * 3.14 * 0.5)), Color.RED, Color.RED);
+                rectLine(p1.x, p1.y, p2.x, p2.y, (float) (0.5f * Math.sin(animation)), Color.MAGENTA, Color.CYAN);
+                rectLine(p1.x, p1.y, p2.x, p2.y, (float) (0.5f * Math.sin(animation * 3.14)), Color.GOLD, Color.GREEN);
+            }
+
+        }
+    }
+
+    public void renderStateRotatePath(TrailComponent spline) {
+        int length = spline.path.length;
+        int newestIndex = (spline.indexHead - 1 + length) % length;
+        for (int i = 0; i < length; i++) {
+            if (i == newestIndex) {
+                continue;
+            }
+
+            Vector3 p1 = spline.path[i];
+            Vector2 p2 = spline.pathEnd[i];
+
+            switch (spline.state[i]) {
+                case -4: continue; //don't render
+                case -3: color.set(Color.GREEN); break; //or color of asteroid hit?
+                case -2: color.set(Color.BLUE); break;
+                case -1: color.set(Color.RED); break;
+                case 1: color.set(Color.GOLD); break;
+                case 2: color.set(Color.CYAN); break;
+                case 3: color.set(Color.WHITE); break;
+                default: color.set(Color.GRAY);
+            }
+
+            // Calculate alpha based on "age"
+            // age 0 = newest, age (length-1) = oldest
+            int age = (newestIndex - i + length) % length;
+            float alpha = 1.0f - ((float) age / length);
+            color.a = alpha;
+
+            //instead of drawing to the next path point, draw to the rotated offset endpoint
+            shape.line(p1.x, p1.y, p2.x, p2.y, color, color);
+        }
+    }
+
+    //stateRotateFill: filled version of stateRotate. Combination of renderStatePath()
+    //(alpha fade by age, newest to oldest) and renderStateRotatePath() (rotated endpoint
+    //per path point). Each quad spans two consecutive path points and their rotated
+    //endpoints: (path[i], pathEnd[i], pathEnd[next], path[next]). The path spacing and
+    //the endpoint spacing differ, so the quad is trapezoidal - a rotated rectangle would
+    //not work, hence two triangles per quad with per-vertex colors: the GPU fades both
+    //along the trail (age) and toward the endpoint (endFade taper).
+    public void renderStateRotateFillPath(TrailComponent spline) {
+        int length = spline.path.length;
+        int newestIndex = (spline.indexHead - 1 + length) % length;
+        for (int i = 0; i < length; i++) {
+            if (i == newestIndex) {
+                continue;
+            }
+
+            int next = (i + 1) % length;
+
+            //don't render gaps (state -4)
+            if (spline.state[i] == -4 || spline.state[next] == -4) {
+                continue;
+            }
+
+            //corners, in order around the perimeter: A -> B -> C -> D
+            Vector3 pA = spline.path[i];
+            Vector2 pB = spline.pathEnd[i];
+            Vector2 pC = spline.pathEnd[next];
+            Vector3 pD = spline.path[next];
+
+            // Calculate alpha based on "age" (same as renderStatePath)
+            // age 0 = newest, age (length-1) = oldest
+            int age = (newestIndex - i + length) % length;
+            float alphaA = 1.0f - ((float) age / length);
+            float alphaD = 1.0f - ((float) ((newestIndex - next + length) % length) / length);
+
+            //corner colors: A/B take the state of point i, C/D take the state of next.
+            //endpoint corners (B/C) fade by endFade so the ribbon tapers into the engine offset
+            switch (spline.state[i]) {
+                case -3: color.set(Color.GREEN); break; //or color of asteroid hit?
+                case -2: color.set(Color.BLUE); break;
+                case -1: color.set(Color.RED); break;
+                case 1: color.set(Color.GOLD); break;
+                case 2: color.set(Color.CYAN); break;
+                case 3: color.set(Color.WHITE); break;
+                default: color.set(Color.GRAY);
+            }
+            fillA.set(color).a = alphaA;
+            fillB.set(color).a = alphaA * endFade;
+            switch (spline.state[next]) {
+                case -3: color.set(Color.GREEN); break;
+                case -2: color.set(Color.BLUE); break;
+                case -1: color.set(Color.RED); break;
+                case 1: color.set(Color.GOLD); break;
+                case 2: color.set(Color.CYAN); break;
+                case 3: color.set(Color.WHITE); break;
+                default: color.set(Color.GRAY);
+            }
+            fillD.set(color).a = alphaD;
+            fillC.set(color).a = alphaD * endFade;
+
+            //two triangles per quad (ShapeDrawer supports per-vertex colors on filledTriangle)
+            shape.filledTriangle(pA.x, pA.y, pB.x, pB.y, pC.x, pC.y, fillA, fillB, fillC);
+            shape.filledTriangle(pA.x, pA.y, pC.x, pC.y, pD.x, pD.y, fillA, fillC, fillD);
+        }
+    }
+
+    public void renderDefaultPath(TrailComponent spline) {
+        //todo: bug with tail index not properly rendered
+        boolean debugDrawHeadTail = false;
+        
+        for (int i = 0; i < spline.path.length-1; i++) {
+            Vector3 p = spline.path[i];
+            
+            int indexWrap = (i + 1) % spline.path.length;
+            Vector3 p2 = spline.path[indexWrap];
+            
+            // don't draw head to tail
+            if (indexWrap != spline.indexHead) {
+                if (spline.color == null) {
+                    shape.line(p.x, p.y, p2.x, p2.y, Color.GREEN, Color.BLUE);
+                } else {
+                    float fadeTime = 500;
+                    long diff = GameScreen.getGameTimeCurrent() - spline.time;
+                    if (diff >= fadeTime) continue;
+                    spline.color.a = 1.0f - ((float) diff / fadeTime);
+                    shape.line(p.x, p.y, p2.x, p2.y, spline.color, spline.color);
+                }
+            } else {
+                //debug draw head to tail
+                if (debugDrawHeadTail) {
+                    shape.line(p.x, p.y, p2.x, p2.y, Color.RED, Color.WHITE);
+                }
+            }
+    
+            if (spline.indexHead == 0) {
+                shape.line(p.x, p.y, p2.x, p2.y, Color.PINK, Color.PURPLE);
+            }
+        }
+    }
+    
+    public void renderRainbowPath(TrailComponent spline) {
+        //todo: rainbow render
+        //xy mode
+        //change of angle: same color when going straight, 360 otherwise, doesnt care speed
+        //change of speed: 0-max, doesn't care angle
+    }
+    
+    //ShapeDrawer has no rectLine; draw the slanted rectangle outline as a 4-corner polygon
+    //(ShapeDrawer's polygon() is a closed loop). The two-color version is approximated
+    //with two half-rectangles: first half in color1, second half at the lerp midpoint.
+    private void rectLine(float x1, float y1, float x2, float y2, float width, Color c1, Color c2) {
+        float mx = (x1 + x2) * 0.5f;
+        float my = (y1 + y2) * 0.5f;
+        rectLine(x1, y1, mx, my, width, c1, c1);
+        rectLine(mx, my, x2, y2, width, tmpColor.set(c1).lerp(c2, 0.5f), tmpColor);
+    }
+
+    private void rectLine(float x1, float y1, float x2, float y2, float width, Color c) {
+        float dx = x2 - x1;
+        float dy = y2 - y1;
+        float len = (float)Math.sqrt(dx * dx + dy * dy);
+        if (len < 1e-8f) {
+            return;
+        }
+        float px = -dy / len * (width * 0.5f);
+        float py = dx / len * (width * 0.5f);
+        float[] v = rectVerts;
+        v[0] = x1 + px;
+        v[1] = y1 + py;
+        v[2] = x2 + px;
+        v[3] = y2 + py;
+        v[4] = x2 - px;
+        v[5] = y2 - py;
+        v[6] = x1 - px;
+        v[7] = y1 - py;
+        shape.setColor(c);
+        shape.polygon(v, 0, 4, width, JoinType.POINTY);
+    }
+
+    @Override
+    public void dispose() {
+        batch.dispose();
+        texture.dispose();
+    }
+    
+}

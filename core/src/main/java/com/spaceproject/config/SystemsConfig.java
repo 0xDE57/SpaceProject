@@ -87,7 +87,8 @@ public class SystemsConfig extends Config {
         //systems.add(new SysCFG(SpaceDustSystem.class, 106, false, true, false, true, true));
         systems.add(new SysCFG(WorldRenderingSystem.class, 110, false, false, true));
         systems.add(new SysCFG(TileGridSystem.class, 111, false, false, true));
-        systems.add(new SysCFG(TrailRenderSystem.class, 112, false, true, true));
+        //systems.add(new SysCFG(TrailShapeRenderSystem.class, 112, false, true, true));
+        systems.add(new SysCFG(TrailBatchRenderSystem.class, 113, false, true, true));
         systems.add(new SysCFG(Sprite2DRenderSystem.class, 119, false, true, true));
         systems.add(new SysCFG(Sprite2DShaderRenderSystem.class, 120, false, true, true));
         systems.add(new SysCFG(AsteroidBatchRenderSystem.class, 121, false, true, false));
