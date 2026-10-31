@@ -39,6 +39,14 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
     private final ShapeRenderer shape;
     private final Color tmpColor = new Color();
     private final Vector2 tmpOffset = new Vector2();
+    //scratch colors for per-corner (per-vertex) colors of the filled trail (stateRotateFill)
+    private final Color fillA = new Color();
+    private final Color fillB = new Color();
+    private final Color fillC = new Color();
+    private final Color fillD = new Color();
+    //todo: eliminate these magic numbers
+    //how much the endpoint corners of stateRotateFill fade relative to the path corners (taper into the engine offset)
+    private static final float endFade = 0.25f;
     private int maxPathSize = 40;
     private float alpha = 1;
     private float animation;
@@ -63,6 +71,7 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
             }
             switch (trail.style) {
                 case stateRotate:
+                case stateRotateFill:
                     trail.pathEnd = new Vector2[maxPathSize];
                     for (int v = 0; v < maxPathSize; v++) {
                         trail.pathEnd[v] = new Vector2();
@@ -99,7 +108,9 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
         
         shape.setProjectionMatrix(GameScreen.cam.combined);
         
-        shape.begin(ShapeRenderer.ShapeType.Line);
+        //note: Filled shapes (stateRotateFill) are also submitted in this pass;
+        //ShapeRenderer flushes when the shape type changes, so Line + Filled can be mixed
+        shape.begin(ShapeRenderer.ShapeType.Filled);
         super.update(deltaTime);
         shape.end();
         
@@ -117,6 +128,7 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
             case state: renderStatePath(trail); break;
             case solid: renderDefaultPath(trail); break;
             case stateRotate: renderStateRotatePath(trail); break;
+            case stateRotateFill: renderStateRotateFillPath(trail); break;
         }
     }
     
@@ -138,7 +150,8 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
         float velocity = 0;
         byte state = 0;
         boolean stateStyle = trail.style == TrailComponent.Style.state
-                || trail.style == TrailComponent.Style.stateRotate;
+                || trail.style == TrailComponent.Style.stateRotate
+                || trail.style == TrailComponent.Style.stateRotateFill;
         if (stateStyle) {
             if (physics != null) {
                 //set velocity
@@ -207,7 +220,8 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
         }
 
         //stateRotate: set endpoint as the path point + endOffset rotated by current rotation
-        if (trail.style == TrailComponent.Style.stateRotate && trail.endOffset != null) {
+        if ((trail.style == TrailComponent.Style.stateRotate
+                || trail.style == TrailComponent.Style.stateRotateFill) && trail.endOffset != null) {
             float rotation = (attachedTo != null)
                     ? Mappers.transform.get(attachedTo.parentEntity).rotation
                     : transform.rotation;
@@ -328,6 +342,71 @@ public class TrailRenderSystem extends SortedIteratingSystem implements EntityLi
 
             //instead of drawing to the next path point, draw to the rotated offset endpoint
             shape.line(p1.x, p1.y, p2.x, p2.y, color, color);
+        }
+    }
+
+    //stateRotateFill: filled version of stateRotate. Combination of renderStatePath()
+    //(alpha fade by age, newest to oldest) and renderStateRotatePath() (rotated endpoint
+    //per path point). Each quad spans two consecutive path points and their rotated
+    //endpoints: (path[i], pathEnd[i], pathEnd[next], path[next]). The path spacing and
+    //the endpoint spacing differ, so the quad is trapezoidal - a rotated rectangle would
+    //not work, hence two triangles per quad with per-vertex colors: the GPU fades both
+    //along the trail (age) and toward the endpoint (endFade taper).
+    public void renderStateRotateFillPath(TrailComponent spline) {
+        int length = spline.path.length;
+        int newestIndex = (spline.indexHead - 1 + length) % length;
+        for (int i = 0; i < length; i++) {
+            if (i == newestIndex) {
+                continue;
+            }
+
+            int next = (i + 1) % length;
+
+            //don't render gaps (state -4)
+            if (spline.state[i] == -4 || spline.state[next] == -4) {
+                continue;
+            }
+
+            //corners, in order around the perimeter: A -> B -> C -> D
+            Vector3 pA = spline.path[i];
+            Vector2 pB = spline.pathEnd[i];
+            Vector2 pC = spline.pathEnd[next];
+            Vector3 pD = spline.path[next];
+
+            // Calculate alpha based on "age" (same as renderStatePath)
+            // age 0 = newest, age (length-1) = oldest
+            int age = (newestIndex - i + length) % length;
+            float alphaA = 1.0f - ((float) age / length);
+            float alphaD = 1.0f - ((float) ((newestIndex - next + length) % length) / length);
+
+            //corner colors: A/B take the state of point i, C/D take the state of next.
+            //endpoint corners (B/C) fade by endFade so the ribbon tapers into the engine offset
+            switch (spline.state[i]) {
+                case -3: color.set(Color.GREEN); break; //or color of asteroid hit?
+                case -2: color.set(Color.BLUE); break;
+                case -1: color.set(Color.RED); break;
+                case 1: color.set(Color.GOLD); break;
+                case 2: color.set(Color.CYAN); break;
+                case 3: color.set(Color.WHITE); break;
+                default: color.set(Color.GRAY);
+            }
+            fillA.set(color).a = alphaA;
+            fillB.set(color).a = alphaA * endFade;
+            switch (spline.state[next]) {
+                case -3: color.set(Color.GREEN); break;
+                case -2: color.set(Color.BLUE); break;
+                case -1: color.set(Color.RED); break;
+                case 1: color.set(Color.GOLD); break;
+                case 2: color.set(Color.CYAN); break;
+                case 3: color.set(Color.WHITE); break;
+                default: color.set(Color.GRAY);
+            }
+            fillD.set(color).a = alphaD;
+            fillC.set(color).a = alphaD * endFade;
+
+            //two triangles per quad
+            shape.triangle(pA.x, pA.y, pB.x, pB.y, pC.x, pC.y, fillA, fillB, fillC);
+            shape.triangle(pA.x, pA.y, pC.x, pC.y, pD.x, pD.y, fillA, fillC, fillD);
         }
     }
 

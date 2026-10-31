@@ -31,7 +31,7 @@ public class TrailComponent implements Component {
     public Style style;
 
     public enum Style {
-        norender, solid, velocity, state, stateRotate, rainbow
+        norender, solid, velocity, state, stateRotate, stateRotateFill, rainbow
     }
     
     public Color color;

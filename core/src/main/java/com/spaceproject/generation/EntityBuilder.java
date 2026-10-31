@@ -174,14 +174,14 @@ public class EntityBuilder {
         TrailComponent spline = new TrailComponent();
         spline.zOrder = 100;//should be on top of others
         spline.style = TrailComponent.Style.state;
-        shipEntity.add(spline);
+        //shipEntity.add(spline);
 
         //rotated trail: state variation that draws from each path point to the rotated endOffset
         //note: must be its own entity, Ashley replaces (not stacks) duplicate component types
         //anchored at the center, same offset as main engine: the particle offset
         //(0, height + 0.2f) is just a magnitude (its direction is overwritten to point back,
         //rotation + 180), so the engine's position relative to body is (-(height + 0.2f), 0)
-        Entity rotateTrail = createTrail(shipEntity, new Vector2(), TrailComponent.Style.stateRotate,
+        Entity rotateTrail = createTrail(shipEntity, new Vector2(), TrailComponent.Style.stateRotateFill,
                 new Vector2(-(height + 0.2f), 0));
 
         //cargo
@@ -215,7 +215,7 @@ public class EntityBuilder {
         }
         
         Entity endTrail = createTrail(shipEntity, new Vector2( -height - 0.2f, 0));
-        entityCluster.add(endTrail);
+        //entityCluster.add(endTrail);
         
         return entityCluster;
     }
@@ -305,7 +305,7 @@ public class EntityBuilder {
         trail.offset = offset;//relative to parent body
         trail.endOffset = endOffset;//endpoint relative to path point, rotated by parent rotation (stateRotate)
         trail.style = style;
-        trail.zOrder = (style == TrailComponent.Style.stateRotate) ? 95 : 90;//below ship spline (100)
+        trail.zOrder = (style == TrailComponent.Style.stateRotate || style == TrailComponent.Style.stateRotateFill) ? 95 : 90;//below ship spline (100)
         entity.add(trail);
 
         return entity;
