@@ -85,11 +85,21 @@ public class LaserSystem extends IteratingSystem implements Disposable {
             laser.color.set(rgb[0] / 255f, rgb[1] / 255f, rgb[2] / 255f, 1);
         }
 
+        distanceTraveled = 0;
         castLaser(entity, laser, body.getPosition(), incidentRay, laser.color.cpy(), laser.range, maxReflections, deltaTime);
     }
     final Color ratio = new Color();
     final Color endColor = new Color();
+    final Color startFade = new Color();
+    final Color coreStart = new Color();
+    final Color coreEnd = new Color();
+    final Color refractionEnd = new Color();
+    final Color refractionCore = new Color();
+    final Color internalReflectionEnd = new Color();
+    final Color internalReflectionCore = new Color();
     final Vector2 innerNormal = new Vector2();
+    //distance already traveled along the beam, used to fade segments relative to the full laser range
+    float distanceTraveled;
     //Vector2 tempvec = new Vector2();
     private void castLaser(Entity entity, LaserComponent laser, Vector2 p1, Vector2 p2, Color color, float length, int reflections, float deltaTime) {
         if (reflections <= 0) return;
@@ -112,24 +122,30 @@ public class LaserSystem extends IteratingSystem implements Disposable {
         
         incidentVector.set(p2).sub(p1);
         float distanceToHit = incidentVector.len();
-        float range = distanceToHit / length;
         float remainingDistance = length - distanceToHit;
-        
+        //fade relative to the total laser range (not the remaining distance) so reflections and
+        //refractions pick up where the previous segment left off instead of restarting at full brightness
+        float startFraction = distanceTraveled / laser.range;
+        float endFraction = (distanceTraveled + distanceToHit) / laser.range;
+
         endColor.set(Color.CLEAR).lerp(color, MathUtils.random()*0.25f);
-        ratio.set(color).lerp(endColor, range - MathUtils.random()*0.15f);
+        startFade.set(color).lerp(endColor, startFraction - MathUtils.random()*0.15f);
+        ratio.set(color).lerp(endColor, endFraction - MathUtils.random()*0.15f);
         //shape.rectLine(p1.x, p1.y, p2.x, p2.y, 0.2f, color, ratio);
         //shape.rectLine(p1.x, p1.y, p2.x, p2.y, 0.1f, Color.WHITE, Color.WHITE);
         //shape.rectLine(p1.x, p1.y, p2.x, p2.y, length, Color.RED, Color.PURPLE);
         //rectLineFilled(shape, p1.x, p1.y, p2.x, p2.y, 0.2f, Color.RED, Color.PURPLE);
         //rectLineFilled(shape, p1.x, p1.y, p2.x, p2.y, 0.2f, Color.WHITE, Color.BLACK);
-        shape.rectLine(p1.x, p1.y, p2.x, p2.y, 0.1f, Color.WHITE, Color.CLEAR);
+        coreStart.set(Color.WHITE).lerp(Color.CLEAR, startFraction - MathUtils.random()*0.15f);
+        coreEnd.set(Color.WHITE).lerp(Color.CLEAR, endFraction - MathUtils.random()*0.15f);
+        shape.rectLine(p1.x, p1.y, p2.x, p2.y, 0.1f, coreStart, coreEnd);
         float thickness = 0.3f + MathUtils.random() * 0.15f;
-        BeamShapeRender.rectLineBeam(shape, p1, p2, thickness, color, ratio, color, Color.CLEAR);
+        BeamShapeRender.rectLineBeam(shape, p1, p2, thickness, startFade, ratio, color, Color.CLEAR);
         
 
         if (rayFixture == null) return;
         //we hit something!
-        float damage = laser.damage * (1 - range) * deltaTime;
+        float damage = laser.damage * (1 - endFraction) * deltaTime;
 
         boolean isGlass = false;
         Object userData = rayFixture.getBody().getUserData();
@@ -191,16 +207,25 @@ public class LaserSystem extends IteratingSystem implements Disposable {
                             //shape.rectLine(p2, refractedEndPoint, 0.1f);
                             //shape.rectLine(p2.x, p2.y, refractedEndPoint.x, refractedEndPoint.y, 0.1f, color, color);
                             //shape.rectLine(p2.x, p2.y, refractedEndPoint.x, refractedEndPoint.y, 0.1f, color, Color.RED); debug discern refraction dir
-                            shape.rectLine(p2.x, p2.y, refractedEndPoint.x, refractedEndPoint.y, 0.1f, Color.WHITE, Color.WHITE);
-                            BeamShapeRender.rectLineBeam(shape, p2, refractedEndPoint, thickness, color, ratio, color, Color.CLEAR);
+                            //refraction continues from the main beam's end fade and keeps fading relative to the full range
+                            float refractedDistance = p2.dst(refractedEndPoint);
+                            float refractedFraction = (distanceTraveled + distanceToHit + refractedDistance) / laser.range;
+                            refractionEnd.set(color).lerp(endColor, refractedFraction - MathUtils.random()*0.15f);
+                            refractionCore.set(Color.WHITE).lerp(Color.CLEAR, refractedFraction - MathUtils.random()*0.15f);
+                            shape.rectLine(p2.x, p2.y, refractedEndPoint.x, refractedEndPoint.y, 0.1f, coreEnd, refractionCore);
+                            BeamShapeRender.rectLineBeam(shape, p2, refractedEndPoint, thickness, ratio, refractionEnd, color, Color.CLEAR);
                             
                             //todo: continue to cast internal reflections
                             //calculate reflection: reflectedVector = incidentVector - 2 * (incidentVector dot normal) * normal
                             Vector2 internalReflection = new Vector2(refractedEndPoint).sub(innerNormal.scl(2 * refractedEndPoint.dot(innerNormal))).setLength(remainingDistance).add(refractedEndPoint);
                             //shape.rectLine(refractedEndPoint, internalReflection, 0.2f);
                             
-                            shape.rectLine(refractedEndPoint.x, refractedEndPoint.y, refractedEndPoint.x, refractedEndPoint.y, 0.1f, Color.WHITE, Color.WHITE);
-                            BeamShapeRender.rectLineBeam(shape, refractedEndPoint, internalReflection, thickness, color, ratio, color, Color.CLEAR);
+                            //internal reflection continues from the refraction's end fade (may clamp fully faded if it exceeds the range)
+                            float internalReflectionFraction = (distanceTraveled + distanceToHit + refractedDistance + remainingDistance) / laser.range;
+                            internalReflectionEnd.set(color).lerp(endColor, internalReflectionFraction - MathUtils.random()*0.15f);
+                            internalReflectionCore.set(Color.WHITE).lerp(Color.CLEAR, internalReflectionFraction - MathUtils.random()*0.15f);
+                            shape.rectLine(refractedEndPoint.x, refractedEndPoint.y, internalReflection.x, internalReflection.y, 0.1f, refractionCore, internalReflectionCore);
+                            BeamShapeRender.rectLineBeam(shape, refractedEndPoint, internalReflection, thickness, refractionEnd, internalReflectionEnd, color, Color.CLEAR);
                         }
                         break;
                         /*
@@ -239,6 +264,7 @@ public class LaserSystem extends IteratingSystem implements Disposable {
 
         //calculate reflection: reflectedVector = incidentVector - 2 * (incidentVector dot normal) * normal
         Vector2 reflectedVector = incidentVector.cpy().sub(rayNormal.scl(2 * incidentVector.dot(rayNormal))).setLength(remainingDistance).add(p2);
+        distanceTraveled += distanceToHit;
         castLaser(entity, laser, p2, reflectedVector, color, remainingDistance, --reflections, deltaTime);
     }
 
