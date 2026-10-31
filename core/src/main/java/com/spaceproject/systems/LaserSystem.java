@@ -122,7 +122,9 @@ public class LaserSystem extends IteratingSystem implements Disposable {
         //shape.rectLine(p1.x, p1.y, p2.x, p2.y, length, Color.RED, Color.PURPLE);
         //rectLineFilled(shape, p1.x, p1.y, p2.x, p2.y, 0.2f, Color.RED, Color.PURPLE);
         //rectLineFilled(shape, p1.x, p1.y, p2.x, p2.y, 0.2f, Color.WHITE, Color.BLACK);
-        BeamShapeRender.rectLineBeam(shape, p1, p2, 0.3f, color, Color.CLEAR);
+        shape.rectLine(p1.x, p1.y, p2.x, p2.y, 0.1f, Color.WHITE, Color.CLEAR);
+        float thickness = 0.3f + MathUtils.random() * 0.15f;
+        BeamShapeRender.rectLineBeam(shape, p1, p2, thickness, color, ratio, color, Color.CLEAR);
         
 
         if (rayFixture == null) return;
@@ -185,15 +187,20 @@ public class LaserSystem extends IteratingSystem implements Disposable {
                             }, refractedEndPoint, p2);
                             rayCount++;
                             
-                            shape.setColor(color.r, color.g, color.b, asteroid.color.a);
+                            //shape.setColor(color.r, color.g, color.b, asteroid.color.a);
                             //shape.rectLine(p2, refractedEndPoint, 0.1f);
-                            shape.rectLine(p2.x, p2.y, refractedEndPoint.x, refractedEndPoint.y, 0.1f, color, color);
+                            //shape.rectLine(p2.x, p2.y, refractedEndPoint.x, refractedEndPoint.y, 0.1f, color, color);
                             //shape.rectLine(p2.x, p2.y, refractedEndPoint.x, refractedEndPoint.y, 0.1f, color, Color.RED); debug discern refraction dir
+                            shape.rectLine(p2.x, p2.y, refractedEndPoint.x, refractedEndPoint.y, 0.1f, Color.WHITE, Color.WHITE);
+                            BeamShapeRender.rectLineBeam(shape, p2, refractedEndPoint, thickness, color, ratio, color, Color.CLEAR);
                             
                             //todo: continue to cast internal reflections
                             //calculate reflection: reflectedVector = incidentVector - 2 * (incidentVector dot normal) * normal
                             Vector2 internalReflection = new Vector2(refractedEndPoint).sub(innerNormal.scl(2 * refractedEndPoint.dot(innerNormal))).setLength(remainingDistance).add(refractedEndPoint);
-                            shape.rectLine(refractedEndPoint, internalReflection, 0.2f);
+                            //shape.rectLine(refractedEndPoint, internalReflection, 0.2f);
+                            
+                            shape.rectLine(refractedEndPoint.x, refractedEndPoint.y, refractedEndPoint.x, refractedEndPoint.y, 0.1f, Color.WHITE, Color.WHITE);
+                            BeamShapeRender.rectLineBeam(shape, refractedEndPoint, internalReflection, thickness, color, ratio, color, Color.CLEAR);
                         }
                         break;
                         /*
