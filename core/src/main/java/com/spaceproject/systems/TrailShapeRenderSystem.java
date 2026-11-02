@@ -110,7 +110,7 @@ public class TrailShapeRenderSystem extends SortedIteratingSystem implements Ent
         
         //note: Filled shapes (stateRotateFill) are also submitted in this pass;
         //ShapeRenderer flushes when the shape type changes, so Line + Filled can be mixed
-        shape.begin(ShapeRenderer.ShapeType.Filled);
+        shape.begin(ShapeRenderer.ShapeType.Line);
         super.update(deltaTime);
         shape.end();
         
