@@ -604,7 +604,7 @@ public class Box2DContactListener implements ContactListener {
 
         engine.addEntity(respawnEntity);
         //explode particle fx at death location (separate short-lived entity)
-        spawnExplosion(engine, transform.pos);
+        //spawnExplosion(engine, transform.pos);
         //outward ring effect
         ProjectileHitRenderSystem.hit(transform.pos.x, transform.pos.y, Color.RED);
         Gdx.app.debug(Box2DContactListener.class.getSimpleName(), "create respawn(" + respawn.reason + ") marker: " + DebugUtil.objString(respawnEntity) + " for " + DebugUtil.objString(entity));
