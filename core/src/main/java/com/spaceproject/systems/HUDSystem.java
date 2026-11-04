@@ -68,7 +68,7 @@ public class HUDSystem extends EntitySystem implements IRequireGameContext, IScr
 
     private static final int poolSize = 400;
     private static final Array<DamageText> activeNumbers = new Array<>(false, poolSize); //don't care about order so we can avoid a System.arraycopy()
-    private static final Pool<DamageText> numbersPool = Pools.get(DamageText.class, poolSize);
+    private static final Pool<DamageText> numbersPool = new DefaultPool<>(DamageText::new, 4, poolSize);
     public static boolean showDamageNumbers = true;
     public static int damageTime = 750;
     public static int activePeak;

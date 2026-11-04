@@ -71,7 +71,7 @@ public class AsteroidBeltSystem extends EntitySystem {
     private ImmutableArray<Entity> spawnBelt;
     
     private final SimpleTimer lastSpawnedTimer = new SimpleTimer(1000);
-    private final Pool<AsteroidRemovedQueue> removePool = Pools.get(AsteroidRemovedQueue.class, 100);
+    private final Pool<AsteroidRemovedQueue> removePool = new DefaultPool<>(AsteroidRemovedQueue::new, 4, 100);
     private final Array<AsteroidRemovedQueue> spawnQ = new Array<>(false, 100);
 
     private final DelaunayTriangulator delaunay = new DelaunayTriangulator();

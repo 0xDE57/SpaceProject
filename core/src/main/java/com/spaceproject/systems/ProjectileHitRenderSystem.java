@@ -7,9 +7,9 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.DefaultPool;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.Pool;
-import com.badlogic.gdx.utils.Pools;
 import com.spaceproject.screens.GameScreen;
 
 import java.util.Iterator;
@@ -40,7 +40,7 @@ public class ProjectileHitRenderSystem extends EntitySystem implements Disposabl
         }
     }
 
-    private static final Pool<Ring> ringPool = Pools.get(Ring.class, 200);
+    private static final Pool<Ring> ringPool = new DefaultPool<>(Ring::new, 4, 200);
     private static final Array<Ring> activeRings = new Array<>(false, 200);
 
     private final ShapeRenderer shape;
