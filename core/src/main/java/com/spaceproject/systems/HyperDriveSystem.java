@@ -60,7 +60,7 @@ public class HyperDriveSystem extends IteratingSystem {
         
         // disable physics body to override velocity
         PhysicsComponent physicsComp = Mappers.physics.get(entity);
-        physicsComp.body.setActive(false);
+        physicsComp.body.setEnabled(false);
         
         // enable hyper
         hyperDrive.state = HyperDriveComponent.State.on;
@@ -87,7 +87,7 @@ public class HyperDriveSystem extends IteratingSystem {
         PhysicsComponent physicsComp = Mappers.physics.get(entity);
         float bodyAngle = physicsComp.body.getAngle();
         physicsComp.body.setTransform(entity.getComponent(TransformComponent.class).pos, bodyAngle);
-        physicsComp.body.setActive(true);
+        physicsComp.body.setEnabled(true);
         //spin when exit hyper, temporarily lose control
         float spin = 50.0f * MathUtils.randomSign();
         physicsComp.body.setAngularVelocity(spin);

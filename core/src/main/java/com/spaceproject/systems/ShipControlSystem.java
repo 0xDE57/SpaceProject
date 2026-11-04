@@ -199,7 +199,7 @@ public class ShipControlSystem extends IteratingSystem {
         //debug force insta-stop
         if (Gdx.input.isKeyJustPressed(Keys.X)) {
             physicsComp.body.setLinearVelocity(0, 0);
-            physicsComp.body.setActive(true);
+            physicsComp.body.setEnabled(true);
             physicsComp.body.setTransform(transformComp.pos, transformComp.rotation);
             
             HyperDriveComponent hyperDrive = Mappers.hyper.get(entity);

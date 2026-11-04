@@ -203,7 +203,7 @@ public class TrailBatchRenderSystem extends SortedIteratingSystem implements Ent
                     }
                 }
 
-                if (!physics.body.isActive()) {
+                if (!physics.body.isEnabled()) {
                     state = 3;
 
                     HyperDriveComponent hyper = Mappers.hyper.get(stateEntity);

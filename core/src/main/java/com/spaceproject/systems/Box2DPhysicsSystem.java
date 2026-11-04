@@ -59,7 +59,7 @@ public class Box2DPhysicsSystem extends EntitySystem {
     private void updateTransform() {
         for (Entity entity : entities) {
             PhysicsComponent physics = Mappers.physics.get(entity);
-            if (!physics.body.isActive()) {
+            if (!physics.body.isEnabled()) {
                 continue;
             }
             

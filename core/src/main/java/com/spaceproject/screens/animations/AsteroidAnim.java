@@ -17,6 +17,7 @@ import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.Transform;
 import com.badlogic.gdx.physics.box2d.World;
+import com.badlogic.gdx.physics.box2d.WorldDef;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import com.spaceproject.generation.BodyBuilder;
@@ -57,7 +58,7 @@ public class AsteroidAnim extends TitleAnimation {
         asteroids.add(asteroid);
         customShapeRenderer = new CustomShapeRenderer();
         
-        world = new World(new Vector2(), true);
+        world = new World(new WorldDef(new Vector2(), true));
         box2DDebugRenderer = new Box2DDebugRenderer(true, true, true, true, true, true);
         
         Body body = BodyBuilder.createPoly(200, 200, asteroid.hullPoly.getVertices(), 0, 0.5f, BodyDef.BodyType.DynamicBody, world, null);
