@@ -11,7 +11,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.Pools;
+import com.badlogic.gdx.utils.PoolManager;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.kotcrab.vis.ui.widget.VisWindow;
 import com.spaceproject.screens.GameScreen;
@@ -22,6 +22,12 @@ import com.spaceproject.utility.IndependentTimer;
  * More compatible with VisUI and some other custom components and behaviors.
  */
 public class ControllerMenuStage extends Stage implements ControllerListener {
+
+    //replacement for the deprecated Pools
+    private static final PoolManager poolManager = new PoolManager();
+    static {
+        poolManager.addPool(InputEvent.class, InputEvent::new);
+    }
 
     private static final float INITIAL_DIRECTION_EMPH_FACTOR = 3.1f;
     private final Vector2 controllerTempCoords = new Vector2();
@@ -383,7 +389,7 @@ public class ControllerMenuStage extends Stage implements ControllerListener {
         if (actor == null || !isActorFocusable(actor) || !isActorHittable(actor))
             return false;
 
-        InputEvent event = Pools.obtain(InputEvent.class);
+        InputEvent event = poolManager.obtain(InputEvent.class);
         event.setType(type);
         event.setStage(this);
         event.setRelatedActor(related);
@@ -395,7 +401,7 @@ public class ControllerMenuStage extends Stage implements ControllerListener {
         actor.fire(event);
 
         boolean handled = event.isHandled();
-        Pools.free(event);
+        poolManager.free(event);
         return handled;
     }
 

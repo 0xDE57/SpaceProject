@@ -59,7 +59,7 @@ public class ConfigManager {
     public <T extends Config> T getConfig(Class<T> type) {
         for (Config c : configs) {
             if (type.isInstance(c)) {
-                return (T) c;
+                return type.cast(c);
             }
         }
         

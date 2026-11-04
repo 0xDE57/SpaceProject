@@ -52,6 +52,8 @@ configure(subprojects) {
 
   compileJava {
     options.incremental = true
+    // surface deprecation/unchecked warnings with file and line numbers instead of a bare "Note:" summary
+    options.compilerArgs += ['-Xlint:deprecation', '-Xlint:unchecked']
   }
 }
 

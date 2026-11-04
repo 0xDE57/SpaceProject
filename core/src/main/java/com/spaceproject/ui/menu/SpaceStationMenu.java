@@ -229,8 +229,12 @@ public class SpaceStationMenu {
                     } else {
                         //init new component
                         try {
-                            Class<? extends Component> newComponent = (Class<? extends Component>) Class.forName("com.spaceproject.components." + componentClass);
-                            player.add(newComponent.newInstance()); //kinda hacky? where if it's a tool, it is removed from player and placed in vehicle tools...
+                            Class<?> newComponent = Class.forName("com.spaceproject.components." + componentClass);
+                            Object newComponentInstance = newComponent.getDeclaredConstructor().newInstance();
+                            if (!(newComponentInstance instanceof Component)) {
+                                throw new ClassCastException("not a Component: " + componentClass);
+                            }
+                            player.add((Component) newComponentInstance); //kinda hacky? where if it's a tool, it is removed from player and placed in vehicle tools...
                             level = 0;
                             isNew = true;
                             //Gdx.app.log(getClass().getSimpleName(), "Add new " + componentClass);
