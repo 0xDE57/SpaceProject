@@ -73,7 +73,7 @@ public class ECSUtil {
 
     /** avoid this mess
      * todo: fix engine particle effect to not require multiple entities with AttachedToComponent */
-    @Deprecated
+    //@Deprecated I was gonna deprecate it but will leave for now, there are other uses for it
     public static Array<Entity> getAttachedEntities(Engine engine, Entity parentEntity) {
         Array<Entity> cluster = new Array<>();
         ImmutableArray<Entity> attachedEntities = engine.getEntitiesFor(Family.all(AttachedToComponent.class).get());
