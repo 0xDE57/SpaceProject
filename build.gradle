@@ -43,7 +43,8 @@ configure(subprojects) {
     // iterate through all files inside that folder
     // convert it to a relative path
     // and append it to the file assets.txt
-    fileTree(assetsFolder).collect { assetsFolder.relativePath(it) }.sort().each {
+    // ignore the /capture folder
+    fileTree(assetsFolder).exclude('capture/**').collect { assetsFolder.relativePath(it) }.sort().each {
       assetsFile.append(it + "\n")
     }
   }
