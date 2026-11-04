@@ -56,8 +56,8 @@ import static com.spaceproject.generation.FontLoader.skinSmallFont;
 public class ECSExplorerWindow extends VisWindow implements EntityListener {
     
     private Engine engine;
-    private VisTree tree;
-    private VisTree.Node systemNodes, entityNodes;
+    private VisTree<VisTreeNode, Object> tree;
+    private VisTreeNode systemNodes, entityNodes;
 
     private static int refreshRate = 1000;
     public static int newTime = 2000;
@@ -84,7 +84,7 @@ public class ECSExplorerWindow extends VisWindow implements EntityListener {
         addCloseButton();
         systemNodes = new VisTreeNode(new VisLabel("Systems", skinSmallFont, Color.WHITE));
         entityNodes = new VisTreeNode(new VisLabel("Entities", skinSmallFont, Color.WHITE));
-        tree = new VisTree();
+        tree = new VisTree<>();
         tree.add(systemNodes);
         tree.add(entityNodes);
         
@@ -133,7 +133,7 @@ public class ECSExplorerWindow extends VisWindow implements EntityListener {
         //update entities
         ((VisLabel)entityNodes.getActor()).setText("Entities (" + engine.getEntities().size() + ")");
         for (Entity entity : engine.getEntities()) {
-            VisTree.Node entNode = entityNodes.findNode(entity);
+            VisTreeNode entNode = entityNodes.findNode(entity);
             if (entNode == null) {
                 entityNodes.add(new EntityNode(entity));
             } else {
@@ -146,7 +146,7 @@ public class ECSExplorerWindow extends VisWindow implements EntityListener {
         //add nodes
         ((VisLabel)systemNodes.getActor()).setText("Systems (" + engine.getSystems().size() + ")");
         for (EntitySystem system : engine.getSystems()) {
-            VisTree.Node sysNode = systemNodes.findNode(system);
+            VisTreeNode sysNode = systemNodes.findNode(system);
             if (sysNode == null) {
                 systemNodes.add(new ReflectionNode(system));
             }
@@ -163,8 +163,8 @@ public class ECSExplorerWindow extends VisWindow implements EntityListener {
         }
     }
     
-    private void clearGhosts(Array<VisTree.Node> nodes) {
-        for (VisTree.Node child : nodes) {
+    private void clearGhosts(Array<VisTreeNode> nodes) {
+        for (VisTreeNode child : nodes) {
             if (child.getChildren().size > 0) {
                 clearGhosts(child.getChildren());
             }
@@ -209,18 +209,18 @@ public class ECSExplorerWindow extends VisWindow implements EntityListener {
     }
     
     public void keyDown(InputEvent event, int keycode) {
-        Selection<VisTree.Node> nodeSelection = tree.getSelection();
-        VisTree.Node selectedNode = nodeSelection.first();
+        Selection<VisTreeNode> nodeSelection = tree.getSelection();
+        VisTreeNode selectedNode = nodeSelection.first();
         if (selectedNode == null) {
             List<Integer> keys = Arrays.asList(keyUP, keyDown, keyLeft, keyRight);
             if (keys.contains(keycode)) {
-                nodeSelection.choose((VisTree.Node) tree.getRootNodes().first());
+                nodeSelection.choose(tree.getRootNodes().first());
             }
             return;
         }
         
-        final Array<VisTree.Node> siblingNodes;
-        VisTree.Node parentNode = selectedNode.getParent();
+        final Array<VisTreeNode> siblingNodes;
+        VisTreeNode parentNode = selectedNode.getParent();
         if (parentNode == null) {
             siblingNodes = tree.getRootNodes();
         } else {
@@ -228,7 +228,7 @@ public class ECSExplorerWindow extends VisWindow implements EntityListener {
         }
         int index = siblingNodes.indexOf(selectedNode, false);
 
-        VisTree.Node chosen = null;
+        VisTreeNode chosen = null;
         switch (keycode) {
             case keyUP:
                 if (index > 0) {
@@ -241,7 +241,7 @@ public class ECSExplorerWindow extends VisWindow implements EntityListener {
                 break;
             case keyDown:
                 if (selectedNode.isExpanded() && (selectedNode.getChildren().size > 0)) {
-                    chosen = (VisTree.Node) selectedNode.getChildren().first();
+                    chosen = selectedNode.getChildren().first();
                 } else {
                     chosen = getNextNodeBelow(siblingNodes, parentNode, index);
                 }
@@ -267,10 +267,10 @@ public class ECSExplorerWindow extends VisWindow implements EntityListener {
         }
     }
     
-    private VisTree.Node getNextNodeAbove(VisTree.Node current) {
+    private VisTreeNode getNextNodeAbove(VisTreeNode current) {
         if (current.isExpanded()) {
             if (current.getChildren().size > 0) {
-                VisTree.Node nextNode = (VisTree.Node) current.getChildren().get(current.getChildren().size - 1);
+                VisTreeNode nextNode = current.getChildren().get(current.getChildren().size - 1);
                 return getNextNodeAbove(nextNode);
             }
         }
@@ -278,13 +278,13 @@ public class ECSExplorerWindow extends VisWindow implements EntityListener {
         return current;
     }
     
-    private VisTree.Node getNextNodeBelow(Array<VisTree.Node> siblingNodes, VisTree.Node parentNode, int index) {
+    private VisTreeNode getNextNodeBelow(Array<VisTreeNode> siblingNodes, VisTreeNode parentNode, int index) {
         if (index < siblingNodes.size - 1) {
             return siblingNodes.get(index + 1);
         } else if (index == siblingNodes.size - 1) {
             if (parentNode != null) {
-                VisTree.Node parentsParent = parentNode.getParent(); //(grandparents?)
-                final Array<VisTree.Node> parentsSiblings; //(aunts/uncles?)
+                VisTreeNode parentsParent = parentNode.getParent(); //(grandparents?)
+                final Array<VisTreeNode> parentsSiblings; //(aunts/uncles?)
                 if (parentsParent == null) {
                     parentsSiblings = tree.getRootNodes();
                 } else {
@@ -305,7 +305,7 @@ public class ECSExplorerWindow extends VisWindow implements EntityListener {
     
     @Override
     public void entityRemoved(Entity entity) {
-        VisTree.Node node = entityNodes.findNode(entity);
+        VisTreeNode node = entityNodes.findNode(entity);
         if (node == null) {
             //Gdx.app.error(getClass().getSimpleName(), "node for entity null!");
             return;

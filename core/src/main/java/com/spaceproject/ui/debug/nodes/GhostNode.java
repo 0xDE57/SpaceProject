@@ -1,7 +1,6 @@
 package com.spaceproject.ui.debug.nodes;
 
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.scenes.scene2d.ui.Tree;
 import com.badlogic.gdx.utils.Array;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.spaceproject.ui.debug.ECSExplorerWindow;
@@ -19,8 +18,8 @@ public class GhostNode extends UpdateNode {
     public GhostNode(UpdateNode nodeRemoved, boolean includeChildren) {
         super(new VisLabel(nodeRemoved.getActor().getName(), skinSmallFont, Color.RED), null);
         
-        Tree.Node parent = nodeRemoved.getParent();
-        final Array<Tree.Node> parentsSiblings;
+        VisTreeNode parent = nodeRemoved.getParent();
+        final Array<VisTreeNode> parentsSiblings;
         if (parent == null) {
             parentsSiblings = nodeRemoved.getTree().getRootNodes();
         } else {
@@ -39,8 +38,8 @@ public class GhostNode extends UpdateNode {
         }
     }
     
-    public void addChildren(Array<Tree.Node> children, Tree.Node root) {
-        for (Tree.Node child : children) {
+    public void addChildren(Array<VisTreeNode> children, VisTreeNode root) {
+        for (VisTreeNode child : children) {
             addChildren(child.getChildren(), root);
             
             add(new VisTreeNode(new VisLabel(child.getActor().getName(), skinSmallFont, Color.RED)));
